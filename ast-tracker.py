@@ -4,14 +4,12 @@ print("Loading...")
 
 import numpy as np
 import wave, time, sys, os, random, base64, math, struct
+from scipy import signal
 import soundfile as sf
 # Drum library
 exec("""\nclass Sine:\n  def __init__(self):\n    self.phase = 0\n  def next(self, freq, pm=0):\n    s = math.sin(self.phase + pm)\n    self.phase = (self.phase + 2 * math.pi * freq / 44100) % (2 * math.pi)\n    return s\ndef linear_env(segs, t):\n  x0 = 0\n  y0 = 0\n  for x1, y1 in segs:\n    if t < x1:\n      return y0 + (t - x0) * ((y1 - y0) / (x1 - x0))\n    x0, y0 = x1, y1\n  return y0\nclass Env:\n  def __init__(self, segs):\n    self.segs = segs\n    self.phase = 0\n  def next(self, scale=1):\n    s = linear_env(self.segs, self.phase)\n    self.phase += scale / 44100\n    return s\ndef kick(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.02, 1), (1, 0)])\n  e2 = Env([(0, 1), (0.01, 0)])\n  for t in range(int(44100 * dur)):\n    o = o1.next(100 * e1.next(2.5), 16 * e2.next() * o2.next(100))\n    samples.append(0.5 * o)\ndef snare(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.2, 0.2), (0.4, 0)])\n  e2 = Env([(0, 1), (0.17, 0)])\n  e3 = Env([(0, 1), (0.005, 0.15), (1, 0)])\n  fb = 0\n  for t in range(int(44100 * dur)):\n    fb = e2.next() * o1.next(100, 1024 * fb)\n    samples.append(0.5 * o2.next(e1.next() * 100 * 2.5, 4.3 * e3.next() * fb))\n""")
 
 title = "Ast-Tracker v1.0.2 (beta)"
-
-# A_c: Amplitude of the sawtooth
-A_c = 0.3
 prev_data = ""
 
 def clear(): os.system("cls")
@@ -20,6 +18,7 @@ def wait(): os.system("pause")
 
 # sawtooth_gen(990.0, 5.0, 1)
 def sawtooth_gen(f_c, duration_s, vol):
+    A_c = 0.3
     period_c = 1.0 / f_c
     periods_in_duration = int(np.ceil(duration_s / period_c))
     samples_per_period = int(np.ceil(period_c * 44100))
@@ -34,8 +33,17 @@ def sawtooth_gen(f_c, duration_s, vol):
 
 # sin_gen(990.0, 5.0, 1)
 def sin_gen(f_c, duration_s, vol):
-    t_samples = np.arange(44100 * duration_s)
-    waveform = np.sin(2 * np.pi * f_c * t_samples / 44100)
+    t_samples = np.arange(44100 * duration_s) / 44100
+    waveform = np.sin(2 * np.pi * f_c * t_samples)
+    waveform_quiet = waveform * vol
+    waveform_ints = np.int16(waveform_quiet * 32768)
+    return(waveform_ints)
+
+
+# triangle_gen(990.0, 5.0, 1)
+def triangle_gen(f_c, duration_s, vol):
+    t_samples = np.arange(44100 * duration_s) / 44100
+    waveform = signal.sawtooth(2 * np.pi * f_c * t_samples, 0.5)
     waveform_quiet = waveform * vol
     waveform_ints = np.int16(waveform_quiet * 32768)
     return(waveform_ints)
@@ -225,12 +233,14 @@ while True:
                 elif params[0]=="B6":
                     params[0] = 1975.53
                 if params[0]=="NN" and params[2]!="NSE" and params[2]!="KIK" and params[2]!="SNR":
-                    write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), float(params[3])))
+                    write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
                 else:
                     if params[2]=="SWT":
                         write(sngname + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
                     elif params[2]=="SIN":
                         write(sngname + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
+                    elif params[2]=="TRE":
+                        write(sngname + ".wav", triangle_gen(float(params[0]), float(params[1]), float(params[3])))
                     elif params[2]=="GTR":
                         write(sngname + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
                     elif params[2]=="KIK" or params[2]=="SNR":
@@ -299,7 +309,7 @@ while True:
             if ch=="":
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
-                inst = input("INST (SWT,SIN,NSE,GTR,KIK,SNR) (NN-delay): ")
+                inst = input("INST (SWT,SIN,NSE,GTR,KIK,SNR,TRE) (NN-delay): ")
                 vol = input("VOLUME: ")
                 f = open(file + ".ast", "w")
                 f.write(oldstuff + "!" + note + " " + length + " " + inst + " " + vol)
@@ -314,5 +324,3 @@ while True:
     if mn_ch!="3" or mn_ch!="2":
         wait()
         clear()
-    else:
-        continue
