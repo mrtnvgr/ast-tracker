@@ -1,15 +1,19 @@
 from __future__ import division
 
-print("Loading...")
+print("Starting...")
 
-import numpy as np
+from numpy import ceil, linspace, tile, arange, pi, int16, sin, random, zeros
+from numpy import abs as npabs
+from numpy import max as npmax
 import wave, time, sys, os, random, base64, math, struct
 from scipy import signal
 import soundfile as sf
+from soundfile import read as sfread
 # Drum library
 exec("""\nclass Sine:\n  def __init__(self):\n    self.phase = 0\n  def next(self, freq, pm=0):\n    s = math.sin(self.phase + pm)\n    self.phase = (self.phase + 2 * math.pi * freq / 44100) % (2 * math.pi)\n    return s\ndef linear_env(segs, t):\n  x0 = 0\n  y0 = 0\n  for x1, y1 in segs:\n    if t < x1:\n      return y0 + (t - x0) * ((y1 - y0) / (x1 - x0))\n    x0, y0 = x1, y1\n  return y0\nclass Env:\n  def __init__(self, segs):\n    self.segs = segs\n    self.phase = 0\n  def next(self, scale=1):\n    s = linear_env(self.segs, self.phase)\n    self.phase += scale / 44100\n    return s\ndef kick(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.02, 1), (1, 0)])\n  e2 = Env([(0, 1), (0.01, 0)])\n  for t in range(int(44100 * dur)):\n    o = o1.next(100 * e1.next(2.5), 16 * e2.next() * o2.next(100))\n    samples.append(0.5 * o)\ndef snare(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.2, 0.2), (0.4, 0)])\n  e2 = Env([(0, 1), (0.17, 0)])\n  e3 = Env([(0, 1), (0.005, 0.15), (1, 0)])\n  fb = 0\n  for t in range(int(44100 * dur)):\n    fb = e2.next() * o1.next(100, 1024 * fb)\n    samples.append(0.5 * o2.next(e1.next() * 100 * 2.5, 4.3 * e3.next() * fb))\n""")
 
-title = "Ast-Tracker v1.0.4 (beta)"
+title = "Ast-Tracker v1.1.0 (beta)"
+instruments = "(SWT,SIN,NSE,GTR,KIK,SNR,TRE) (NN-delay)"
 prev_data = ""
 
 def clear(): os.system("cls")
@@ -20,54 +24,54 @@ def wait(): os.system("pause")
 def sawtooth_gen(f_c, duration_s, vol):
     A_c = 0.3
     period_c = 1.0 / f_c
-    periods_in_duration = int(np.ceil(duration_s / period_c))
-    samples_per_period = int(np.ceil(period_c * 44100))
-    sawtooth_period = np.linspace(1.0, -1.0, samples_per_period)
-    tiled_sawtooth = np.tile(sawtooth_period, periods_in_duration)
-    samples_in_duration = int(np.ceil(duration_s * 44100))
+    periods_in_duration = int(ceil(duration_s / period_c))
+    samples_per_period = int(ceil(period_c * 44100))
+    sawtooth_period = linspace(1.0, -1.0, samples_per_period)
+    tiled_sawtooth = tile(sawtooth_period, periods_in_duration)
+    samples_in_duration = int(ceil(duration_s * 44100))
     waveform = tiled_sawtooth[:samples_in_duration]
     waveform *= A_c
     waveform_quiet = waveform * vol
-    waveform_ints = np.int16(waveform_quiet * 32768)
+    waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 # sin_gen(990.0, 5.0, 1)
 def sin_gen(f_c, duration_s, vol):
-    t_samples = np.arange(44100 * duration_s) / 44100
-    waveform = np.sin(2 * np.pi * f_c * t_samples)
+    t_samples = arange(44100 * duration_s) / 44100
+    waveform = sin(2 * pi * f_c * t_samples)
     waveform_quiet = waveform * vol
-    waveform_ints = np.int16(waveform_quiet * 32768)
+    waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 
 # triangle_gen(990.0, 5.0, 1)
 def triangle_gen(f_c, duration_s, vol):
-    t_samples = np.arange(44100 * duration_s) / 44100
-    waveform = signal.sawtooth(2 * np.pi * f_c * t_samples, 0.5)
+    t_samples = arange(44100 * duration_s) / 44100
+    waveform = signal.sawtooth(2 * pi * f_c * t_samples, 0.5)
     waveform_quiet = waveform * vol
-    waveform_ints = np.int16(waveform_quiet * 32768)
+    waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 # noise_gen(5.0, 1.0)
 def noise_gen(duration_s, vol):
-    pure = np.linspace(0, 1, int(duration_s) * 44100)
-    noise = np.random.normal(0, 1, pure.shape)
+    pure = linspace(0, 1, int(duration_s) * 44100)
+    noise = random.normal(0, 1, pure.shape)
     signal = pure + noise
     waveform_quiet = signal * vol
-    waveform_ints = np.int16(waveform_quiet * 32768)
+    waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 # guitar_gen(990.0, 5.0, 1)
 def guitar_gen(f_c, duration_s, vol):
-    noise = np.random.uniform(-1, 1, int(44100/f_c))
-    samples = np.zeros(int(44100*duration_s))
+    noise = random.uniform(-1, 1, int(44100/f_c))
+    samples = zeros(int(44100*duration_s))
     for i in range(len(noise)):
         samples[i] = noise[i]
     for i in range(len(noise), len(samples)):
         samples[i] = (samples[i-len(noise)]+samples[i-len(noise)-1])/2
-    samples = samples / np.max(np.abs(samples))
+    samples = samples / npmax(npabs(samples))
     waveform_quiet = samples * vol
-    return np.int16(waveform_quiet * 32768)
+    return int16(waveform_quiet * 32768)
 
 # write("example.wav", sawtooth_gen(...))
 def write(filename, data):
@@ -104,12 +108,18 @@ while True:
         print(" ")
         sngname = input("Song (only name): ")
         # прочитка
-        sngfile = open(sngname + ".ast", "r")
-        asfsng = sngfile.read()
-        sngfile.close()
+        try:
+            sngfile = open(sngname + ".ast", "r")
+            astsng = sngfile.read()
+            sngfile.close()
+        except FileNotFoundError:
+            clear()
+            print(" File " + sngname + ".ast doesn't exist!")
+            wait()
+            continue
         i = 0
-        asfsng = asfsng.split("!")
-        for section in asfsng:
+        astsng = astsng.split("!")
+        for section in astsng:
             i = i + 1
             if section!="":
                 params = section.split()
@@ -265,12 +275,13 @@ while True:
                             obj.writeframesraw( prev_data )
                         for sample in samples:
                             waveform_quiet = sample * float(params[3])
-                            waveform_ints = np.int16(waveform_quiet * 32768)
+                            waveform_ints = int16(waveform_quiet * 32768)
                             obj.writeframesraw( waveform_ints )
                         obj.close()
                     elif params[2]=="NSE":
                         write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
-                print("Lines: " + str(i) + "/" + str(len(asfsng)))
+                print("Lines: " + str(i) + "/" + str(len(astsng)))
+                print("Converted!")
                 wait()
                 continue
     elif mn_ch=="2":
@@ -281,9 +292,11 @@ while True:
         filename = input(".WAV File (only name): ")
         outputfile = input("Output File (*): ")
         try:
-            data, fs = sf.read(filename + ".wav", dtype='float32')
+            data, fs = sfread(filename + ".wav", dtype='float32')
         except RuntimeError:
-            print("Not found.")
+            clear()
+            print(" File " + filename + ".wav doesn't exist!")
+            wait()
             continue
         st = open(outputfile, "w")
         a = 'exec("""import sounddevice as sd\\nimport numpy as np\\nimport base64\\nsd.play(np.frombuffer(base64.decodebytes(b"' + base64.b64encode(data).decode() + '"), dtype=np.float64), 44100)""")'
@@ -306,22 +319,48 @@ while True:
                 pass
             print(" Current file: " + file + ".ast")
             print("[NOTE] [LENGTH] [INSTR] [VOL]")
-            for i in oldstuff.split("!"): #[-10:]
-                print(i)
+            oldlines = oldstuff.split("!")
+            if oldlines[0]=="":
+                oldlines.pop(0) # [0] empty string bug fix
+            n = -1
+            for i in oldlines:
+                n = n + 1
+                print("[" + str(n) + "] " + i)
             print(" ")
-            ch = input("Undo last line? (empty-no)|(main menu-mm): ")
+            print(" Delete last line - 'u' ")
+            print(" Go to menu - 'm' ")
+            print(" Edit specific line - 'e' + number")
+            print(" Delete specific line - 'd' + number")
+            print(" New note - '' ")
+            ch = input(": ")
             if ch=="":
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
-                inst = input("INST (SWT,SIN,NSE,GTR,KIK,SNR,TRE) (NN-delay): ")
+                inst = input("INST " + instruments + ": ")
                 vol = input("VOLUME: ")
                 f = open(file + ".ast", "w")
                 f.write(oldstuff + "!" + note + " " + length + " " + inst + " " + vol)
-            elif ch=="mm":
+            elif ch=="m":
                 break
-            else:
+            elif ch=="u":
                 f = open(file + ".ast", "w")
-                f.writelines("!".join(oldstuff.split('!')[:-1]))
+                f.write("!".join(oldlines[:-1]))
+            elif 'e' in ch:
+                line = ch.replace('e', '').replace(' ', '')
+                f = open(file + ".ast", "w")
+                note = input("NOTE: ")
+                length = input("LENGTH: ")
+                inst = input("INST " + instruments + ": ")
+                vol = input("VOLUME: ")
+                oldlines[int(line)] = note + " " + length + " " + inst + " " + vol
+                f.write('!'.join(oldlines))
+            elif 'd' in ch:
+                line = ch.replace('d', '').replace(' ', '')
+                oldlines.pop(int(line))
+                f = open(file + ".ast", "w")
+                f.write('!'.join(oldlines))
+            else:
+                continue
             f.close()
         continue
     elif mn_ch=="4":
@@ -330,7 +369,13 @@ while True:
         print(" ")
         filename = input("File (only name): ")
         speed = float(input("Speed (1.0): "))
-        data = open(filename + ".ast", "r").read()
+        try:
+            data = open(filename + ".ast", "r").read()
+        except FileNotFoundError:
+            clear()
+            print(" File " + filename + ".ast doesn't exist!")
+            wait()
+            continue
         f = open(filename + ".ast", "w")
         for i in data.split("!"):
             if i!='':
