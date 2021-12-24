@@ -9,7 +9,7 @@ import soundfile as sf
 # Drum library
 exec("""\nclass Sine:\n  def __init__(self):\n    self.phase = 0\n  def next(self, freq, pm=0):\n    s = math.sin(self.phase + pm)\n    self.phase = (self.phase + 2 * math.pi * freq / 44100) % (2 * math.pi)\n    return s\ndef linear_env(segs, t):\n  x0 = 0\n  y0 = 0\n  for x1, y1 in segs:\n    if t < x1:\n      return y0 + (t - x0) * ((y1 - y0) / (x1 - x0))\n    x0, y0 = x1, y1\n  return y0\nclass Env:\n  def __init__(self, segs):\n    self.segs = segs\n    self.phase = 0\n  def next(self, scale=1):\n    s = linear_env(self.segs, self.phase)\n    self.phase += scale / 44100\n    return s\ndef kick(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.02, 1), (1, 0)])\n  e2 = Env([(0, 1), (0.01, 0)])\n  for t in range(int(44100 * dur)):\n    o = o1.next(100 * e1.next(2.5), 16 * e2.next() * o2.next(100))\n    samples.append(0.5 * o)\ndef snare(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.2, 0.2), (0.4, 0)])\n  e2 = Env([(0, 1), (0.17, 0)])\n  e3 = Env([(0, 1), (0.005, 0.15), (1, 0)])\n  fb = 0\n  for t in range(int(44100 * dur)):\n    fb = e2.next() * o1.next(100, 1024 * fb)\n    samples.append(0.5 * o2.next(e1.next() * 100 * 2.5, 4.3 * e3.next() * fb))\n""")
 
-title = "Ast-Tracker v1.0.3 (beta)"
+title = "Ast-Tracker v1.0.4 (beta)"
 prev_data = ""
 
 def clear(): os.system("cls")
@@ -91,15 +91,16 @@ def write(filename, data):
 while True:
     clear()
     print(title)
-    print(" 1) .AST to .WAV Converter")
-    print(" 2) .WAV to OneString")
-    print(" 3) .AST Editor")
+    print(" 1) .AST to .WAV converter")
+    print(" 2) .WAV to one string")
+    print(" 3) .AST editor")
+    print(" 4) .AST speed changer")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
         clear()
         print(title)
-        print(" .AST to .WAV Converter")
+        print(" .AST to .WAV converter")
         print(" ")
         sngname = input("Song (only name): ")
         # прочитка
@@ -270,10 +271,12 @@ while True:
                     elif params[2]=="NSE":
                         write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
                 print("Lines: " + str(i) + "/" + str(len(asfsng)))
+                wait()
+                continue
     elif mn_ch=="2":
         clear()
         print(title)
-        print(" .WAV to OneString Converter")
+        print(" .WAV to one string Converter")
         print(" ")
         filename = input(".WAV File (only name): ")
         outputfile = input("Output File (*): ")
@@ -286,9 +289,10 @@ while True:
         a = 'exec("""import sounddevice as sd\\nimport numpy as np\\nimport base64\\nsd.play(np.frombuffer(base64.decodebytes(b"' + base64.b64encode(data).decode() + '"), dtype=np.float64), 44100)""")'
         st.write(a)
         st.close()
+        continue
     elif mn_ch=="3":
         clear()
-        print(" .AST Editor")
+        print(" .AST editor")
         print(" ")
         file = input("File (only name): ")
         oldstuff = ""
@@ -300,10 +304,10 @@ while True:
                 f.close()
             except:
                 pass
-            print(" Current File: " + file + ".ast")
+            print(" Current file: " + file + ".ast")
             print("[NOTE] [LENGTH] [INSTR] [VOL]")
-            for i in oldstuff.split("!")[-10:]:
-                print(i) # 10 last elems
+            for i in oldstuff.split("!"): #[-10:]
+                print(i)
             print(" ")
             ch = input("Undo last line? (empty-no)|(main menu-mm): ")
             if ch=="":
@@ -319,8 +323,20 @@ while True:
                 f = open(file + ".ast", "w")
                 f.writelines("!".join(oldstuff.split('!')[:-1]))
             f.close()
-    else:
-        sys.exit()
-    if mn_ch!="3" or mn_ch!="2":
-        wait()
+        continue
+    elif mn_ch=="4":
         clear()
+        print(" .AST Speed changer")
+        print(" ")
+        filename = input("File (only name): ")
+        speed = float(input("Speed (1.0): "))
+        data = open(filename + ".ast", "r").read()
+        f = open(filename + ".ast", "w")
+        for i in data.split("!"):
+            if i!='':
+                temp = i.split(" ")
+                f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
+        f.close()
+        continue
+    else:
+        continue
