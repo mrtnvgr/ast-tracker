@@ -12,13 +12,13 @@ from soundfile import read as sfread
 # Drum library
 exec("""\nclass Sine:\n  def __init__(self):\n    self.phase = 0\n  def next(self, freq, pm=0):\n    s = math.sin(self.phase + pm)\n    self.phase = (self.phase + 2 * math.pi * freq / 44100) % (2 * math.pi)\n    return s\ndef linear_env(segs, t):\n  x0 = 0\n  y0 = 0\n  for x1, y1 in segs:\n    if t < x1:\n      return y0 + (t - x0) * ((y1 - y0) / (x1 - x0))\n    x0, y0 = x1, y1\n  return y0\nclass Env:\n  def __init__(self, segs):\n    self.segs = segs\n    self.phase = 0\n  def next(self, scale=1):\n    s = linear_env(self.segs, self.phase)\n    self.phase += scale / 44100\n    return s\ndef kick(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.02, 1), (1, 0)])\n  e2 = Env([(0, 1), (0.01, 0)])\n  for t in range(int(44100 * dur)):\n    o = o1.next(100 * e1.next(2.5), 16 * e2.next() * o2.next(100))\n    samples.append(0.5 * o)\ndef snare(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.2, 0.2), (0.4, 0)])\n  e2 = Env([(0, 1), (0.17, 0)])\n  e3 = Env([(0, 1), (0.005, 0.15), (1, 0)])\n  fb = 0\n  for t in range(int(44100 * dur)):\n    fb = e2.next() * o1.next(100, 1024 * fb)\n    samples.append(0.5 * o2.next(e1.next() * 100 * 2.5, 4.3 * e3.next() * fb))\n""")
 
-title = "Ast-Tracker v1.1.0 (beta)"
-instruments = "(SWT,SIN,NSE,GTR,KIK,SNR,TRE) (NN-delay)"
+title = "Ast-Tracker v1.1.1 (beta)"
 prev_data = ""
 
 def clear(): os.system("cls")
 clear()
 def wait(): os.system("pause")
+def delete(file): os.system("del /q " + file)
 
 # sawtooth_gen(990.0, 5.0, 1)
 def sawtooth_gen(f_c, duration_s, vol):
@@ -99,6 +99,8 @@ while True:
     print(" 2) .WAV to one string")
     print(" 3) .AST editor")
     print(" 4) .AST speed changer")
+    print(" ")
+    print(" 0) Help")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
@@ -305,6 +307,7 @@ while True:
         continue
     elif mn_ch=="3":
         clear()
+        print(title)
         print(" .AST editor")
         print(" ")
         file = input("File (only name): ")
@@ -331,12 +334,13 @@ while True:
             print(" Go to menu - 'm' ")
             print(" Edit specific line - 'e' + number")
             print(" Delete specific line - 'd' + number")
+            print(" Delete song - 'delete-song'")
             print(" New note - '' ")
             ch = input(": ")
             if ch=="":
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
-                inst = input("INST " + instruments + ": ")
+                inst = input("INST: ")
                 vol = input("VOLUME: ")
                 f = open(file + ".ast", "w")
                 f.write(oldstuff + "!" + note + " " + length + " " + inst + " " + vol)
@@ -345,12 +349,21 @@ while True:
             elif ch=="u":
                 f = open(file + ".ast", "w")
                 f.write("!".join(oldlines[:-1]))
+            elif ch=="delete-song":
+                clear()
+                print("Are you sure?")
+                life_ch = input("Y/N: ").lower()
+                if life_ch=="y":
+                    delete(file + ".ast")
+                    break
+                else:
+                    continue
             elif 'e' in ch:
                 line = ch.replace('e', '').replace(' ', '')
                 f = open(file + ".ast", "w")
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
-                inst = input("INST " + instruments + ": ")
+                inst = input("INST: ")
                 vol = input("VOLUME: ")
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + vol
                 f.write('!'.join(oldlines))
@@ -365,6 +378,7 @@ while True:
         continue
     elif mn_ch=="4":
         clear()
+        print(title)
         print(" .AST Speed changer")
         print(" ")
         filename = input("File (only name): ")
@@ -382,6 +396,25 @@ while True:
                 temp = i.split(" ")
                 f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
         f.close()
+        continue
+    elif mn_ch=="0":
+        clear()
+        print(title)
+        print("Help")
+        print(" ")
+        print("Instruments:")
+        print(" Sawtooth wave - SWT")
+        print(" Sine wave - SIN")
+        print(" Triangle wave - TRE")
+        print(" Noise - NSE")
+        print(" Guitar - GTR")
+        print(" Drum kick - KIK")
+        print(" Drum snare - SNR")
+        print(" ")
+        print(" Delay - NN")
+        print(" ")
+        print(" ")
+        wait()
         continue
     else:
         continue
