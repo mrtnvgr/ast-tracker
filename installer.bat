@@ -1,1 +1,2 @@
-pip install numpy wave base64 scipy soundfile sounddevice
+@echo off
+pip install numpy wave scipy soundfile simpleaudio
