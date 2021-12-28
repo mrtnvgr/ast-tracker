@@ -2,23 +2,42 @@ from __future__ import division
 
 print("Starting...")
 
-from numpy import ceil, linspace, tile, arange, pi, int16, sin, random, zeros
+from numpy import ceil, linspace, tile, arange, pi, int16, sin, random, zeros, float32, int16, frombuffer
 from numpy import abs as npabs
 from numpy import max as npmax
-import wave, time, sys, os, random, base64, math, struct
-from scipy import signal
+import wave, time, sys, os, random, base64, math
 import soundfile as sf
 from soundfile import read as sfread
-# Drum library
-exec("""\nclass Sine:\n  def __init__(self):\n    self.phase = 0\n  def next(self, freq, pm=0):\n    s = math.sin(self.phase + pm)\n    self.phase = (self.phase + 2 * math.pi * freq / 44100) % (2 * math.pi)\n    return s\ndef linear_env(segs, t):\n  x0 = 0\n  y0 = 0\n  for x1, y1 in segs:\n    if t < x1:\n      return y0 + (t - x0) * ((y1 - y0) / (x1 - x0))\n    x0, y0 = x1, y1\n  return y0\nclass Env:\n  def __init__(self, segs):\n    self.segs = segs\n    self.phase = 0\n  def next(self, scale=1):\n    s = linear_env(self.segs, self.phase)\n    self.phase += scale / 44100\n    return s\ndef kick(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.02, 1), (1, 0)])\n  e2 = Env([(0, 1), (0.01, 0)])\n  for t in range(int(44100 * dur)):\n    o = o1.next(100 * e1.next(2.5), 16 * e2.next() * o2.next(100))\n    samples.append(0.5 * o)\ndef snare(samples, dur):\n  o1 = Sine()\n  o2 = Sine()\n  e1 = Env([(0, 1), (0.2, 0.2), (0.4, 0)])\n  e2 = Env([(0, 1), (0.17, 0)])\n  e3 = Env([(0, 1), (0.005, 0.15), (1, 0)])\n  fb = 0\n  for t in range(int(44100 * dur)):\n    fb = e2.next() * o1.next(100, 1024 * fb)\n    samples.append(0.5 * o2.next(e1.next() * 100 * 2.5, 4.3 * e3.next() * fb))\n""")
 
-title = "Ast-Tracker v1.1.2 (beta)"
+title = "Ast-Tracker v1.2.0 (beta)"
 prev_data = ""
 
 def clear(): os.system("cls")
 clear()
 def wait(): os.system("pause")
 def delete(file): os.system("del /q " + file)
+
+# settings logic
+def settings(mode):
+    global setting_sample_pack
+    try:
+        settings_lines = open("settings.as", "r").readlines()
+    except FileNotFoundError:
+        print("Couldnt find settings file. Creating...")
+        open("settings.as", "w").write("sample_pack = default")
+        settings_lines = open("settings.as", "r").readlines()
+    if mode=="r":
+        for settings_line in settings_lines:
+            if "sample_pack" in settings_line:
+                setting_sample_pack = settings_line.replace("sample_pack = ", "")
+    elif mode=="s":
+        i = -1
+        for settings_line in settings_lines:
+            i += 1
+            if "sample_pack" in settings_line:
+                settings_lines[i] = "sample_pack = " + setting_sample_pack
+        open("settings.as", "w").writelines(settings_lines)
+settings("r")
 
 # sawtooth_gen(990.0, 5.0, 1)
 def sawtooth_gen(f_c, duration_s, vol):
@@ -73,6 +92,21 @@ def guitar_gen(f_c, duration_s, vol):
     waveform_quiet = samples * vol
     return int16(waveform_quiet * 32768)
 
+def sample_gen(sample_name, sample_volume):
+    global setting_sample_pack
+    try:
+        obj = wave.open(setting_sample_pack + "\\" + sample_name.lower() + ".wav", 'r')
+        sample_data = obj.readframes(obj.getnframes())
+        obj.close()
+    except FileNotFoundError:
+        print("Sample doesnt exist.")
+    audio_as_np_int16 = frombuffer(sample_data, dtype=int16)
+    audio_as_np_float32 = audio_as_np_int16.astype(float32)
+    max_int16 = 2**15
+    audio_normalised = audio_as_np_float32 / max_int16
+    audio_normalised = audio_normalised * sample_volume
+    return(sample_data)
+
 # write("example.wav", sawtooth_gen(...))
 def write(filename, data):
     global prev_data
@@ -100,6 +134,7 @@ while True:
     print(" 3) .AST editor")
     print(" 4) .AST speed changer")
     print(" ")
+    print(" 5) Settings")
     print(" 0) Help")
     print(" ")
     mn_ch = input(": ")
@@ -245,46 +280,21 @@ while True:
                     params[0] = 1864.66
                 elif params[0]=="B6":
                     params[0] = 1975.53
-                if params[0]=="NN" and params[2]!="NSE" and params[2]!="KIK" and params[2]!="SNR":
+                if params[2]=="NN":
                     write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
-                else:
-                    if params[2]=="SWT":
-                        write(sngname + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
-                    elif params[2]=="SIN":
-                        write(sngname + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
-                    elif params[2]=="TRE":
-                        write(sngname + ".wav", triangle_gen(float(params[0]), float(params[1]), float(params[3])))
-                    elif params[2]=="GTR":
-                        write(sngname + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
-                    elif params[2]=="KIK" or params[2]=="SNR":
-                        samples = []
-                        if params[2]=="KIK":
-                            kick(samples, 0.25)
-                        elif params[2]=="SNR":
-                            snare(samples, 0.5)
-                        prev_data = ""
-                        try:
-                            obj = wave.open(sngname + ".wav",'r')
-                            prev_data = obj.readframes(obj.getnframes())
-                            obj.close()
-                        except FileNotFoundError:
-                            pass
-                        obj = wave.open(sngname + ".wav",'w')
-                        obj.setnchannels(2)
-                        obj.setsampwidth(2)
-                        obj.setframerate(44100)
-                        if prev_data!="":
-                            obj.writeframesraw( prev_data )
-                        for sample in samples:
-                            waveform_quiet = sample * float(params[3])
-                            waveform_ints = int16(waveform_quiet * 32768)
-                            obj.writeframesraw( waveform_ints )
-                        obj.close()
-                    elif params[2]=="NSE":
-                        write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
+                elif params[2]=="SWT":
+                    write(sngname + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
+                elif params[2]=="SIN":
+                    write(sngname + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
+                elif params[2]=="TRE":
+                    write(sngname + ".wav", triangle_gen(float(params[0]), float(params[1]), float(params[3])))
+                elif params[2]=="GTR":
+                    write(sngname + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
+                elif params[2]=="NSE":
+                    write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
+                else: # sample logic
+                    write(sngname + ".wav", sample_gen(params[2], float(params[3])))
                 print("Lines: " + str(i) + "/" + str(len(astsng)))
-                print("Converted!")
-                wait()
                 continue
     elif mn_ch=="2":
         clear()
@@ -313,7 +323,7 @@ while True:
         file = input("File (only name): ")
         oldstuff = ""
         while True:
-            os.system("cls")
+            clear()
             try:
                 f = open(file + ".ast", "r")
                 oldstuff = f.read()
@@ -410,11 +420,30 @@ while True:
         print(" Guitar - GTR")
         print(" Drum kick - KIK")
         print(" Drum snare - SNR")
-        print(" ")
         print(" Delay - NN")
         print(" ")
+        print("FAQ:")
+        print(" Error: 'wave.Error: unknown format: 3'")
+        print(" Solution: use only 16 bit wav files")
         print(" ")
         wait()
         continue
+    elif mn_ch=="5": # settings
+        clear()
+        print(title)
+        print(" Settings")
+        print(" Pick:")
+        print(" [1] Sample pack: " + setting_sample_pack)
+        print(" ")
+        print(" [0] Main menu")
+        print(" ")
+        ch = input(": ")
+        if ch=="1":
+            setting_sample_pack = input("New value: ")
+        elif ch=="0":
+            continue
+        else:
+            continue
+        settings("s")
     else:
         continue
