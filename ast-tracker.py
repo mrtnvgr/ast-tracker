@@ -2,14 +2,15 @@ from __future__ import division
 
 print("Starting...")
 
-from numpy import ceil, linspace, tile, arange, pi, int16, sin, random, zeros, float32, int16, frombuffer
+from numpy import ceil, linspace, tile, arange, pi, int16, sin, zeros, float32, int16, frombuffer
+from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 import wave, time, sys, os, random, base64, math
+from scipy import signal
 import soundfile as sf
-from soundfile import read as sfread
 
-title = "Ast-Tracker v1.2.1"
+title = "Ast-Tracker v1.2.2"
 prev_data = ""
 
 def clear(): os.system("cls")
@@ -82,7 +83,7 @@ def noise_gen(duration_s, vol):
 
 # guitar_gen(990.0, 5.0, 1)
 def guitar_gen(f_c, duration_s, vol):
-    noise = random.uniform(-1, 1, int(44100/f_c))
+    noise = nprandom.uniform(-1, 1, int(44100/f_c))
     samples = zeros(int(44100*duration_s))
     for i in range(len(noise)):
         samples[i] = noise[i]
@@ -100,11 +101,6 @@ def sample_gen(sample_name, sample_volume):
         obj.close()
     except FileNotFoundError:
         print("Sample doesnt exist.")
-    audio_as_np_int16 = frombuffer(sample_data, dtype=int16)
-    audio_as_np_float32 = audio_as_np_int16.astype(float32)
-    max_int16 = 2**15
-    audio_normalised = audio_as_np_float32 / max_int16
-    audio_normalised = audio_normalised * sample_volume
     return(sample_data)
 
 # write("example.wav", sawtooth_gen(...))
@@ -132,9 +128,10 @@ while True:
     print(" 1) .AST to .WAV converter")
     print(" 2) .WAV to one string")
     print(" 3) .AST editor")
-    print(" 4) .AST speed changer")
+    print(" 4) .AST tools")
+    print(" 5) .WAV joiner")
     print(" ")
-    print(" 5) Settings")
+    print(" 6) Settings")
     print(" 0) Help")
     print(" ")
     mn_ch = input(": ")
@@ -403,7 +400,7 @@ while True:
         filename = input(".WAV File (only name): ")
         outputfile = input("Output File (*): ")
         try:
-            data, fs = sfread(filename + ".wav", dtype='float32')
+            data, fs = sf.read(filename + ".wav", dtype='float32')
         except RuntimeError:
             clear()
             print(" File " + filename + ".wav doesn't exist!")
@@ -488,46 +485,78 @@ while True:
     elif mn_ch=="4":
         clear()
         print(title)
-        print(" .AST Speed changer")
+        print(" .AST tools")
         print(" ")
-        filename = input("File (only name): ")
-        speed = float(input("Speed (1.0): "))
-        try:
-            data = open(filename + ".ast", "r").read()
-        except FileNotFoundError:
-            clear()
-            print(" File " + filename + ".ast doesn't exist!")
-            wait()
+        print(" 1) .AST speed changer")
+        print(" 2) .AST joiner")
+        print(" ")
+        tl = input(": ")
+        clear()
+        if tl=="1":
+            print(title)
+            print(" .AST speed changer")
+            print(" ")
+            filename = input("File (only name): ")
+            speed = input("Speed (1.0): ")
+            try:
+                speed = float(speed) # for avoiding bugs
+            except ValueError:
+                print("Couldnt convert '" + speed + "' to float.")
+                wait()
+                continue
+            try:
+                data = open(filename + ".ast", "r").read()
+            except FileNotFoundError:
+                clear()
+                print(" File " + filename + ".ast doesn't exist!")
+                wait()
+                continue
+            f = open(filename + ".ast", "w")
+            for i in data.split("!"):
+                if i!='':
+                    temp = i.split(" ")
+                    f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
+            f.close()
             continue
-        f = open(filename + ".ast", "w")
-        for i in data.split("!"):
-            if i!='':
-                temp = i.split(" ")
-                f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
-        f.close()
-        continue
-    elif mn_ch=="0":
+        elif tl=="2":
+            print(title)
+            print(" .AST joiner")
+            print(" ")
+            filelist = input("Files (only names): ").split(" ")
+            resultfile = input("Result file (only name): ")
+            total_file_data = ""
+            for filename in filelist:
+                try:
+                    data = open(filename + ".ast", "r").read()
+                except FileNotFoundError:
+                    clear()
+                    print(" File " + filename + ".ast doesn't exist!")
+                    wait()
+                    continue
+                total_file_data = total_file_data + data.replace("\n", "")
+            open(resultfile + ".ast", "w").write(total_file_data)
+            continue
+        else:
+            continue
+    elif mn_ch=="5":
         clear()
         print(title)
-        print("Help")
+        print(" .WAV joiner")
         print(" ")
-        print("Instruments:")
-        print(" Sawtooth wave - SWT")
-        print(" Sine wave - SIN")
-        print(" Triangle wave - TRE")
-        print(" Noise - NSE")
-        print(" Guitar - GTR")
-        print(" Drum kick - KIK")
-        print(" Drum snare - SNR")
-        print(" Delay - NN")
-        print(" ")
-        print("FAQ:")
-        print(" Error: 'wave.Error: unknown format: 3'")
-        print(" Solution: use only 16 bit wav files")
-        print(" ")
-        wait()
+        filenames = input("Files (only names): ").split(" ")
+        output_file_name = input("Result file (only name): ")
+        for filename in filenames:
+            try:
+                obj = wave.open(filename + '.wav','r')
+                sound = obj.readframes(obj.getnframes())
+                obj.close()
+            except FileNotFoundError:
+                print("File " + filename + ".wav doesnt exist.")
+                wait()
+                continue
+            write(output_file_name + ".wav", sound)
         continue
-    elif mn_ch=="5": # settings
+    elif mn_ch=="6": # settings
         clear()
         print(title)
         print(" Settings")
@@ -544,5 +573,25 @@ while True:
         else:
             continue
         settings("s")
+        continue
+    elif mn_ch=="0":
+        clear()
+        print(title)
+        print("Help")
+        print(" ")
+        print("Default instruments:")
+        print(" Sawtooth wave - SWT")
+        print(" Sine wave - SIN")
+        print(" Triangle wave - TRE")
+        print(" Noise - NSE")
+        print(" Guitar - GTR")
+        print(" Delay - NN")
+        print(" ")
+        print("FAQ:")
+        print(" Error: 'wave.Error: unknown format'")
+        print(" Solution: use only 16 bit wav files")
+        print(" ")
+        wait()
+        continue
     else:
         continue
