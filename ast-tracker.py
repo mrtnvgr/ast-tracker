@@ -9,7 +9,7 @@ import wave, time, sys, os, random, base64, math
 import soundfile as sf
 from soundfile import read as sfread
 
-title = "Ast-Tracker v1.2.0 (beta)"
+title = "Ast-Tracker v1.2.1"
 prev_data = ""
 
 def clear(): os.system("cls")
@@ -160,7 +160,55 @@ while True:
             i = i + 1
             if section!="":
                 params = section.split()
-                if params[0]=="C2":
+                if params[0]=="C0":
+                    params[0] = 16.35
+                elif params[0]=="C#0":
+                    params[0] = 17.32
+                elif params[0]=="D0":
+                    params[0] = 18.35
+                elif params[0]=="D#0":
+                    params[0] = 19.45
+                elif params[0]=="E0":
+                    params[0] = 20.60
+                elif params[0]=="F0":
+                    params[0] = 21.83
+                elif params[0]=="F#0":
+                    params[0] = 23.12
+                elif params[0]=="G0":
+                    params[0] = 24.50
+                elif params[0]=="G#0":
+                    params[0] = 25.96
+                elif params[0]=="A0":
+                    params[0] = 27.50
+                elif params[0]=="A#0":
+                    params[0] = 29.14
+                elif params[0]=="B0":
+                    params[0] = 30.87
+                elif params[0]=="C1":
+                    params[0] = 32.70
+                elif params[0]=="C#1":
+                    params[0] = 34.65
+                elif params[0]=="D1":
+                    params[0] = 36.71
+                elif params[0]=="D#1":
+                    params[0] = 38.89
+                elif params[0]=="E1":
+                    params[0] = 41.20
+                elif params[0]=="F1":
+                    params[0] = 43.65
+                elif params[0]=="F#1":
+                    params[0] = 46.25
+                elif params[0]=="G1":
+                    params[0] = 49.00
+                elif params[0]=="G#1":
+                    params[0] = 51.91
+                elif params[0]=="A1":
+                    params[0] = 55.00
+                elif params[0]=="A#1":
+                    params[0] = 58.27
+                elif params[0]=="B1":
+                    params[0] = 61.74
+                elif params[0]=="C2":
                     params[0] = 65.41
                 elif params[0]=="C#2":
                     params[0] = 69.30
@@ -280,6 +328,57 @@ while True:
                     params[0] = 1864.66
                 elif params[0]=="B6":
                     params[0] = 1975.53
+                elif params[0]=="C7":
+                    params[0] = 2093.00
+                elif params[0]=="C#7":
+                    params[0] = 2217.46
+                elif params[0]=="D7":
+                    params[0] = 2349.32
+                elif params[0]=="D#7":
+                    params[0] = 2489.02
+                elif params[0]=="E7":
+                    params[0] = 2637.02
+                elif params[0]=="F7":
+                    params[0] = 2793.83
+                elif params[0]=="F#7":
+                    params[0] = 2959.96
+                elif params[0]=="G7":
+                    params[0] = 3135.96
+                elif params[0]=="G#7":
+                    params[0] = 3322.44
+                elif params[0]=="A7":
+                    params[0] = 3520.00
+                elif params[0]=="A#7":
+                    params[0] = 3729.31
+                elif params[0]=="B7":
+                    params[0] = 3951.07
+                elif params[0]=="C8":
+                    params[0] = 4186.01
+                elif params[0]=="C#8":
+                    params[0] = 4434.92
+                elif params[0]=="D8":
+                    params[0] = 4698.63
+                elif params[0]=="D#8":
+                    params[0] = 5274.04
+                elif params[0]=="E8":
+                    params[0] = 5274.04
+                elif params[0]=="F8":
+                    params[0] = 5587.65
+                elif params[0]=="F#8":
+                    params[0] = 5919.91
+                elif params[0]=="G8":
+                    params[0] = 6271.93
+                elif params[0]=="G#8":
+                    params[0] = 6644.88
+                elif params[0]=="A8":
+                    params[0] = 7040.00
+                elif params[0]=="A#8":
+                    params[0] = 7458.62
+                elif params[0]=="B8":
+                    params[0] = 7902.13
+                else:
+                    print("Note doesnt exist. Skip.")
+                    continue
                 if params[2]=="NN":
                     write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
                 elif params[2]=="SWT":
