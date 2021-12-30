@@ -10,7 +10,7 @@ import wave, time, sys, os, random, base64, math
 from scipy import signal
 import soundfile as sf
 
-title = "Ast-Tracker v1.2.2"
+title = "Ast-Tracker v1.2.3"
 prev_data = ""
 
 def clear(): os.system("cls")
@@ -121,17 +121,35 @@ def write(filename, data):
     obj.writeframesraw( data )
     obj.close()
 
-# ГЛАВНОЕ МЕНЮ
+def readfile(filename, type):
+    if type=="wav":
+        try:
+            obj = wave.open(filename,'r')
+            sound = obj.readframes(obj.getnframes())
+            obj.close()
+            return sound
+        except FileNotFoundError:
+            print("File " + filename + " doesnt exist.")
+            wait()
+            return False
+    try:
+        data = open(filename, "r").read()
+        return data
+    except FileNotFoundError:
+        clear()
+        print(" File " + filename + " doesn't exist!")
+        wait()
+        return False
+
 while True:
     clear()
     print(title)
     print(" 1) .AST to .WAV converter")
-    print(" 2) .WAV to one string")
-    print(" 3) .AST editor")
-    print(" 4) .AST tools")
-    print(" 5) .WAV joiner")
+    print(" 2) .AST editor")
+    print(" 3) .AST tools")
+    print(" 4) .WAV tools")
     print(" ")
-    print(" 6) Settings")
+    print(" 5) Settings")
     print(" 0) Help")
     print(" ")
     mn_ch = input(": ")
@@ -141,15 +159,8 @@ while True:
         print(" .AST to .WAV converter")
         print(" ")
         sngname = input("Song (only name): ")
-        # прочитка
-        try:
-            sngfile = open(sngname + ".ast", "r")
-            astsng = sngfile.read()
-            sngfile.close()
-        except FileNotFoundError:
-            clear()
-            print(" File " + sngname + ".ast doesn't exist!")
-            wait()
+        astsng = readfile(sngname + ".ast", "ast")
+        if astsng==False:
             continue
         i = 0
         astsng = astsng.split("!")
@@ -395,25 +406,6 @@ while True:
     elif mn_ch=="2":
         clear()
         print(title)
-        print(" .WAV to one string Converter")
-        print(" ")
-        filename = input(".WAV File (only name): ")
-        outputfile = input("Output File (*): ")
-        try:
-            data, fs = sf.read(filename + ".wav", dtype='float32')
-        except RuntimeError:
-            clear()
-            print(" File " + filename + ".wav doesn't exist!")
-            wait()
-            continue
-        st = open(outputfile, "wb")
-        a = b'exec("""import simpleaudio as sa\\nimport numpy as np\\nimport base64\\nobj = sa.play_buffer(np.frombuffer(base64.decodebytes(b"' + base64.b64encode(data) + b'"), dtype=np.float64), 2, 2, 44100)\nobj.wait_done()""")'
-        st.write(a)
-        st.close()
-        continue
-    elif mn_ch=="3":
-        clear()
-        print(title)
         print(" .AST editor")
         print(" ")
         file = input("File (only name): ")
@@ -421,10 +413,8 @@ while True:
         while True:
             clear()
             try:
-                f = open(file + ".ast", "r")
-                oldstuff = f.read()
-                f.close()
-            except:
+                oldstuff = open(file + ".ast", "r").read()
+            except FileNotFoundError:
                 pass
             print(" Current file: " + file + ".ast")
             print("[NOTE] [LENGTH] [INSTR] [VOL]")
@@ -482,13 +472,13 @@ while True:
                 continue
             f.close()
         continue
-    elif mn_ch=="4":
+    elif mn_ch=="3":
         clear()
         print(title)
         print(" .AST tools")
-        print(" ")
-        print(" 1) .AST speed changer")
-        print(" 2) .AST joiner")
+        print(" 1) Speed changer")
+        print(" 2) Joiner")
+        print(" 3) Instrument replacer")
         print(" ")
         tl = input(": ")
         clear()
@@ -504,12 +494,8 @@ while True:
                 print("Couldnt convert '" + speed + "' to float.")
                 wait()
                 continue
-            try:
-                data = open(filename + ".ast", "r").read()
-            except FileNotFoundError:
-                clear()
-                print(" File " + filename + ".ast doesn't exist!")
-                wait()
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
                 continue
             f = open(filename + ".ast", "w")
             for i in data.split("!"):
@@ -526,43 +512,95 @@ while True:
             resultfile = input("Result file (only name): ")
             total_file_data = ""
             for filename in filelist:
-                try:
-                    data = open(filename + ".ast", "r").read()
-                except FileNotFoundError:
-                    clear()
-                    print(" File " + filename + ".ast doesn't exist!")
-                    wait()
+                data = readfile(filename + ".ast", "ast")
+                if data==False:
                     continue
                 total_file_data = total_file_data + data.replace("\n", "")
             open(resultfile + ".ast", "w").write(total_file_data)
             continue
+        elif tl=="3":
+            print(title)
+            print(" .AST instrument replacer")
+            print(" ")
+            print(" 1) Replace all instruments to ...")
+            print(" 2) Replace ... instrument to ...")
+            ch = input(": ")
+            filename = input("File (only name): ")
+            if ch=="1":
+                instrument = input("Instrument: ")
+            elif ch=="2":
+                oinst = input("Instrument (old): ")
+                ninst = input("Instrument (new): ")
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
+                continue
+            data = data.split("!")
+            if data=="":
+                continue
+            i = -1
+            for dat in data:
+                i += 1
+                if dat!="":
+                    dat = dat.split(" ")
+                    if ch=="1":
+                        dat[2] = instrument
+                    elif ch=="2":
+                        if dat[2]==oinst:
+                            dat[2] = ninst
+                    data[i] = ' '.join(dat)
+            open(filename + ".ast", "w").write('!'.join(data))
+            continue
         else:
             continue
-    elif mn_ch=="5":
+    elif mn_ch=="4":
         clear()
         print(title)
-        print(" .WAV joiner")
+        print(" .WAV tools")
+        print(" 1) .WAV to one string Converter")
+        print(" 2) Joiner")
         print(" ")
-        filenames = input("Files (only names): ").split(" ")
-        output_file_name = input("Result file (only name): ")
-        for filename in filenames:
+        tl = input(": ")
+        clear()
+        if tl=="1":
+            clear()
+            print(title)
+            print(" .WAV to one string Converter")
+            print(" ")
+            filename = input(".WAV File (only name): ")
+            outputfile = input("Output File (*): ")
             try:
-                obj = wave.open(filename + '.wav','r')
-                sound = obj.readframes(obj.getnframes())
-                obj.close()
-            except FileNotFoundError:
-                print("File " + filename + ".wav doesnt exist.")
+                data, fs = sf.read(filename + ".wav", dtype='float32')
+            except RuntimeError:
+                clear()
+                print(" File " + filename + ".wav doesn't exist!")
                 wait()
                 continue
-            write(output_file_name + ".wav", sound)
-        continue
-    elif mn_ch=="6": # settings
+            st = open(outputfile, "wb")
+            a = b'exec("""import simpleaudio as sa\\nimport numpy as np\\nimport base64\\nobj = sa.play_buffer(np.frombuffer(base64.decodebytes(b"' + base64.b64encode(data) + b'"), dtype=np.float64), 2, 2, 44100)\nobj.wait_done()""")'
+            st.write(a)
+            st.close()
+            continue
+        elif tl=="2":
+            clear()
+            print(title)
+            print(" .WAV joiner")
+            print(" ")
+            filenames = input("Files (only names): ").split(" ")
+            output_file_name = input("Result file (only name): ")
+            for filename in filenames:
+                sound = readfile(filename + ".wav", "wav")
+                if sound==False:
+                    continue
+                write(output_file_name + ".wav", sound)
+            continue
+        else:
+            continue
+    elif mn_ch=="5": # settings
         clear()
         print(title)
         print(" Settings")
         print(" Pick:")
         print(" [1] Sample pack: " + setting_sample_pack)
-        print(" ")
         print(" [0] Main menu")
         print(" ")
         ch = input(": ")
