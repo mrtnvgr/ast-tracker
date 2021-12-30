@@ -10,8 +10,7 @@ import wave, time, sys, os, random, base64, math
 from scipy import signal
 import soundfile as sf
 
-title = "Ast-Tracker v1.2.3"
-prev_data = ""
+title = "Ast-Tracker v1.2.4"
 
 def clear(): os.system("cls")
 clear()
@@ -154,6 +153,7 @@ while True:
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
+        prev_data = "" # bug fix
         clear()
         print(title)
         print(" .AST to .WAV converter")
@@ -385,8 +385,9 @@ while True:
                 elif params[0]=="B8":
                     params[0] = 7902.13
                 else:
-                    print("Note doesnt exist. Skip.")
-                    continue
+                    if params[0]!="NN": # delay skip fix
+                        print("Note doesnt exist. Skip.")
+                        continue
                 if params[2]=="NN":
                     write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
                 elif params[2]=="SWT":
@@ -439,7 +440,7 @@ while True:
                 inst = input("INST: ")
                 vol = input("VOLUME: ")
                 f = open(file + ".ast", "w")
-                f.write(oldstuff + "!" + note + " " + length + " " + inst + " " + vol)
+                f.write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + vol) # new line bug fix
             elif ch=="m":
                 break
             elif ch=="u":
