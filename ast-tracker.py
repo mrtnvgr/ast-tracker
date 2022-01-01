@@ -10,8 +10,7 @@ import wave, time, sys, os, random, base64, math
 from scipy import signal
 import soundfile as sf
 
-title = "Ast-Tracker v1.2.4"
-
+title = "Ast-Tracker v1.2.5"
 def clear(): os.system("cls")
 clear()
 def wait(): os.system("pause")
@@ -54,14 +53,6 @@ def sawtooth_gen(f_c, duration_s, vol):
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
-# sin_gen(990.0, 5.0, 1)
-def sin_gen(f_c, duration_s, vol):
-    t_samples = arange(44100 * duration_s) / 44100
-    waveform = sin(2 * pi * f_c * t_samples)
-    waveform_quiet = waveform * vol
-    waveform_ints = int16(waveform_quiet * 32768)
-    return(waveform_ints)
-
 
 # triangle_gen(990.0, 5.0, 1)
 def triangle_gen(f_c, duration_s, vol):
@@ -71,9 +62,18 @@ def triangle_gen(f_c, duration_s, vol):
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
+
+# sin_gen(990.0, 5.0, 1)
+def sin_gen(f_c, duration_s, vol):
+    t_samples = arange(44100 * duration_s) / 44100
+    waveform = sin(2 * pi * f_c * t_samples)
+    waveform_quiet = waveform * vol
+    waveform_ints = int16(waveform_quiet * 32768)
+    return(waveform_ints)
+
 # noise_gen(5.0, 1.0)
 def noise_gen(duration_s, vol):
-    pure = linspace(0, 1, int(duration_s) * 44100)
+    pure = linspace(0, 1, int(duration_s * 44100))
     noise = random.normal(0, 1, pure.shape)
     signal = pure + noise
     waveform_quiet = signal * vol
@@ -480,6 +480,7 @@ while True:
         print(" 1) Speed changer")
         print(" 2) Joiner")
         print(" 3) Instrument replacer")
+        print(" 4) Pitcher")
         print(" ")
         tl = input(": ")
         clear()
@@ -551,6 +552,89 @@ while True:
                     data[i] = ' '.join(dat)
             open(filename + ".ast", "w").write('!'.join(data))
             continue
+        elif tl=="4":
+            clear()
+            print(title)
+            print(" .AST Pitcher")
+            print(" ")
+            filename = input("File (only name): ")
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
+                continue
+            pc = input("Pitch: ")
+            data = data.split("!")
+            if data=="":
+                continue
+            i = -1
+            ndata = []
+            for dat in data:
+                i += 1
+                if dat!="":
+                    dat = dat.split(" ")
+                    instrument = dat[0]
+                    # checking for up pitch or down pitch
+                    if pc[:1]!="-": # pitch up
+                        for i in range(0, int(pc)):
+                            if instrument[0]=="C" and instrument[1]!="#":
+                                instrument = "C#" + instrument.replace("C", "")
+                            elif instrument[0]=="C" and instrument[1]=="#":
+                                instrument = "D" + instrument.replace("C#", "")
+                            elif instrument[0]=="D" and instrument[1]!="#":
+                                instrument = "D#" + instrument.replace("D", "")
+                            elif instrument[0]=="D" and instrument[1]=="#":
+                                instrument = "E" + instrument.replace("D#", "")
+                            elif instrument[0]=="E":
+                                instrument = "F" + instrument.replace("E", "")
+                            elif instrument[0]=="F" and instrument[1]!="#":
+                                instrument = "F#" + instrument.replace("F", "")
+                            elif instrument[0]=="F" and instrument[1]=="#":
+                                instrument = "G" + instrument.replace("F#", "")
+                            elif instrument[0]=="G" and instrument[1]!="#":
+                                instrument = "G#" + instrument.replace("G", "")
+                            elif instrument[0]=="G" and instrument[1]=="#":
+                                instrument = "A" + instrument.replace("G#", "")
+                            elif instrument[0]=="A" and instrument[1]!="#":
+                                instrument = "A#" + instrument.replace("A", "")
+                            elif instrument[0]=="A" and instrument[1]=="#":
+                                instrument = "B" + instrument.replace("A#", "")
+                            elif instrument[0]=="B":
+                                if instrument[-1]!="7": # max octave
+                                    instrument = "C" + str(int(instrument[-1]) + 1) # octave up
+                            else: # invalid note
+                                print("Invalid note")
+                    elif pc[:1]=="-": # pitch down
+                        for i in range(1, int(pc.replace("-", ""))):
+                            if instrument[0]=="B":
+                                if instrument[-1]!="0": # minimal octave
+                                    instrument = "C" + str(int(instrument[-1]) - 1) # octave down
+                            elif instrument[0]=="A" and instrument[1]=="#":
+                                instrument = "A" + instrument.replace("A#", "")
+                            elif instrument[0]=="A" and instrument[1]!="#":
+                                instrument = "G#" + instrument.replace("A", "")
+                            elif instrument[0]=="G" and instrument[1]=="#":
+                                instrument = "G" + instrument.replace("G#", "")
+                            elif instrument[0]=="G" and instrument[1]!="#":
+                                instrument = "F#" + instrument.replace("G", "")
+                            elif instrument[0]=="F" and instrument[1]=="#":
+                                instrument = "F" + instrument.replace("F#", "")
+                            elif instrument[0]=="F" and instrument[1]!="#":
+                                instrument = "E" + instrument.replace("F", "")
+                            elif instrument[0]=="E":
+                                instrument = "D#" + instrument.replace("E", "")
+                            elif instrument[0]=="D" and instrument[1]=="#":
+                                instrument = "D" + instrument.replace("D#", "")
+                            elif instrument[0]=="D" and instrument[1]!="#":
+                                instrument = "C#" + instrument.replace("D", "")
+                            elif instrument[0]=="C" and instrument[1]=="#":
+                                instrument = "C" + instrument.replace("C#", "")
+                            elif instrument[0]=="C" and instrument[1]!="#":
+                                if instrument[-1]!="0": # minimal octave
+                                    instrument = "B" + str(int(instrument[-1]) + 1) # octave down
+                            else:
+                                print("Invalid note!")
+                    dat[0] = instrument
+                    ndata.append(' '.join(dat))
+            open(filename + ".ast", "w").write('!'.join(ndata))
         else:
             continue
     elif mn_ch=="4":
