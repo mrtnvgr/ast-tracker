@@ -1,2 +1,2 @@
 @echo off
-pip install numpy wave scipy soundfile
+pip install numpy wave soundfile

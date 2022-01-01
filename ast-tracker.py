@@ -2,15 +2,14 @@ from __future__ import division
 
 print("Starting...")
 
-from numpy import ceil, linspace, tile, arange, pi, int16, sin, zeros, float32, int16, frombuffer
+from numpy import linspace, arange, pi, int16, sin, zeros, float32, int16, frombuffer
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 import wave, time, sys, os, random, base64, math
-from scipy import signal
 import soundfile as sf
 
-title = "Ast-Tracker v1.2.5"
+title = "Ast-Tracker v1.3.0"
 def clear(): os.system("cls")
 clear()
 def wait(): os.system("pause")
@@ -39,49 +38,42 @@ def settings(mode):
 settings("r")
 
 # sawtooth_gen(990.0, 5.0, 1)
-def sawtooth_gen(f_c, duration_s, vol):
-    A_c = 0.3
-    period_c = 1.0 / f_c
-    periods_in_duration = int(ceil(duration_s / period_c))
-    samples_per_period = int(ceil(period_c * 44100))
-    sawtooth_period = linspace(1.0, -1.0, samples_per_period)
-    tiled_sawtooth = tile(sawtooth_period, periods_in_duration)
-    samples_in_duration = int(ceil(duration_s * 44100))
-    waveform = tiled_sawtooth[:samples_in_duration]
-    waveform *= A_c
-    waveform_quiet = waveform * vol
+def sawtooth_gen(f_c, duration_s, amp):
+    t_samples = linspace(0, 1, int(duration_s * 44100))
+    waveform = f_c * t_samples
+    waveform_quiet = waveform * amp
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 
 # triangle_gen(990.0, 5.0, 1)
-def triangle_gen(f_c, duration_s, vol):
+def triangle_gen(f_c, duration_s, amp):
     t_samples = arange(44100 * duration_s) / 44100
     waveform = signal.sawtooth(2 * pi * f_c * t_samples, 0.5)
-    waveform_quiet = waveform * vol
+    waveform_quiet = waveform * amp
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 
 # sin_gen(990.0, 5.0, 1)
-def sin_gen(f_c, duration_s, vol):
+def sin_gen(f_c, duration_s, amp):
     t_samples = arange(44100 * duration_s) / 44100
     waveform = sin(2 * pi * f_c * t_samples)
-    waveform_quiet = waveform * vol
+    waveform_quiet = waveform * amp
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 # noise_gen(5.0, 1.0)
-def noise_gen(duration_s, vol):
+def noise_gen(duration_s, amp):
     pure = linspace(0, 1, int(duration_s * 44100))
     noise = random.normal(0, 1, pure.shape)
     signal = pure + noise
-    waveform_quiet = signal * vol
+    waveform_quiet = signal * amp
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
 # guitar_gen(990.0, 5.0, 1)
-def guitar_gen(f_c, duration_s, vol):
+def guitar_gen(f_c, duration_s, amp):
     noise = nprandom.uniform(-1, 1, int(44100/f_c))
     samples = zeros(int(44100*duration_s))
     for i in range(len(noise)):
@@ -89,10 +81,10 @@ def guitar_gen(f_c, duration_s, vol):
     for i in range(len(noise), len(samples)):
         samples[i] = (samples[i-len(noise)]+samples[i-len(noise)-1])/2
     samples = samples / npmax(npabs(samples))
-    waveform_quiet = samples * vol
+    waveform_quiet = samples * amp
     return int16(waveform_quiet * 32768)
 
-def sample_gen(sample_name, sample_volume):
+def sample_gen(sample_name):
     global setting_sample_pack
     try:
         obj = wave.open(setting_sample_pack + "\\" + sample_name.lower() + ".wav", 'r')
@@ -401,9 +393,8 @@ while True:
                 elif params[2]=="NSE":
                     write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
                 else: # sample logic
-                    write(sngname + ".wav", sample_gen(params[2], float(params[3])))
+                    write(sngname + ".wav", sample_gen(params[2]))
                 print("Lines: " + str(i) + "/" + str(len(astsng)))
-                continue
     elif mn_ch=="2":
         clear()
         print(title)
@@ -418,7 +409,7 @@ while True:
             except FileNotFoundError:
                 pass
             print(" Current file: " + file + ".ast")
-            print("[NOTE] [LENGTH] [INSTR] [VOL]")
+            print("[NOTE] [LENGTH] [INSTR] [AMP]")
             oldlines = oldstuff.split("!")
             if oldlines[0]=="":
                 oldlines.pop(0) # [0] empty string bug fix
@@ -438,9 +429,9 @@ while True:
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
                 inst = input("INST: ")
-                vol = input("VOLUME: ")
+                amp = input("AMPLITUDE: ")
                 f = open(file + ".ast", "w")
-                f.write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + vol) # new line bug fix
+                f.write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
             elif ch=="m":
                 break
             elif ch=="u":
@@ -461,8 +452,8 @@ while True:
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
                 inst = input("INST: ")
-                vol = input("VOLUME: ")
-                oldlines[int(line)] = note + " " + length + " " + inst + " " + vol
+                amp = input("AMPLITUDE: ")
+                oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
                 f.write('!'.join(oldlines))
             elif 'd' in ch:
                 line = ch.replace('d', '').replace(' ', '')
@@ -472,7 +463,6 @@ while True:
             else:
                 continue
             f.close()
-        continue
     elif mn_ch=="3":
         clear()
         print(title)
@@ -481,6 +471,8 @@ while True:
         print(" 2) Joiner")
         print(" 3) Instrument replacer")
         print(" 4) Pitcher")
+        print(" 5) Repeater")
+        print(" 6) Amplitude changer")
         print(" ")
         tl = input(": ")
         clear()
@@ -505,7 +497,6 @@ while True:
                     temp = i.split(" ")
                     f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
             f.close()
-            continue
         elif tl=="2":
             print(title)
             print(" .AST joiner")
@@ -519,20 +510,25 @@ while True:
                     continue
                 total_file_data = total_file_data + data.replace("\n", "")
             open(resultfile + ".ast", "w").write(total_file_data)
-            continue
         elif tl=="3":
             print(title)
             print(" .AST instrument replacer")
             print(" ")
             print(" 1) Replace all instruments to ...")
             print(" 2) Replace ... instrument to ...")
+            print(" 3) Replace ... instrument to random instrument from ...")
             ch = input(": ")
+            if ch!="1" and ch!="2" and ch!="3":
+                continue
             filename = input("File (only name): ")
             if ch=="1":
                 instrument = input("Instrument: ")
             elif ch=="2":
                 oinst = input("Instrument (old): ")
                 ninst = input("Instrument (new): ")
+            elif ch=="3":
+                oinst = input("Instrument (old): ")
+                ninst = input("Instruments list (new): ").split(" ")
             data = readfile(filename + ".ast", "ast")
             if data==False:
                 continue
@@ -546,12 +542,14 @@ while True:
                     dat = dat.split(" ")
                     if ch=="1":
                         dat[2] = instrument
-                    elif ch=="2":
+                    elif ch=="2" or ch=="3":
                         if dat[2]==oinst:
-                            dat[2] = ninst
+                            if ch=="3":
+                                dat[2] = random.choice(ninst)
+                            else:
+                                dat[2] = ninst
                     data[i] = ' '.join(dat)
             open(filename + ".ast", "w").write('!'.join(data))
-            continue
         elif tl=="4":
             clear()
             print(title)
@@ -635,6 +633,47 @@ while True:
                     dat[0] = instrument
                     ndata.append(' '.join(dat))
             open(filename + ".ast", "w").write('!'.join(ndata))
+        elif tl=="5":
+            clear()
+            print(title)
+            print(" .AST Repeater")
+            print(" ")
+            filename = input("File (only name): ")
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
+                continue
+            try:
+                count = int(input("Count: "))
+            except ValueError:
+                print("Invalid integer!")
+                wait()
+                continue
+            data = data.replace("\n", "")
+            if data[1]!="!": # '1' bug fix
+                data = data + "!"
+            open(filename + ".ast", "w").write(data * count)
+        elif tl=="6":
+            clear()
+            print(title)
+            print(" .AST amplitude changer")
+            print(" ")
+            filename = input("File (only name): ")
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
+                continue
+            pc = input("Amplitude: ")
+            data = data.split("!")
+            if data=="":
+                continue
+            i = -1
+            ndata = []
+            for dat in data:
+                i += 1
+                if dat!="":
+                    dat = dat.split(" ")
+                    dat[3] = pc
+                    ndata.append(' '.join(dat))
+            open(filename + ".ast", "w").write('!'.join(ndata))
         else:
             continue
     elif mn_ch=="4":
@@ -643,6 +682,7 @@ while True:
         print(" .WAV tools")
         print(" 1) .WAV to one string Converter")
         print(" 2) Joiner")
+        print(" 3) Repeater")
         print(" ")
         tl = input(": ")
         clear()
@@ -664,7 +704,6 @@ while True:
             a = b'exec("""import simpleaudio as sa\\nimport numpy as np\\nimport base64\\nobj = sa.play_buffer(np.frombuffer(base64.decodebytes(b"' + base64.b64encode(data) + b'"), dtype=np.float64), 2, 2, 44100)\nobj.wait_done()""")'
             st.write(a)
             st.close()
-            continue
         elif tl=="2":
             clear()
             print(title)
@@ -677,7 +716,26 @@ while True:
                 if sound==False:
                     continue
                 write(output_file_name + ".wav", sound)
-            continue
+        elif tl=="3":
+            clear()
+            print(title)
+            print(" .WAV Repeater")
+            print(" ")
+            filename = input("File (only name): ")
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
+                continue
+            try:
+                count = int(input("Count: "))
+            except ValueError:
+                print("Invalid integer!")
+                wait()
+                continue
+            sound = readfile(filename + ".wav", "wav")
+            if sound==False:
+                continue
+            for i in range(1, count):
+                write(filename + ".wav", sound)
         else:
             continue
     elif mn_ch=="5": # settings
@@ -696,7 +754,6 @@ while True:
         else:
             continue
         settings("s")
-        continue
     elif mn_ch=="0":
         clear()
         print(title)
@@ -715,6 +772,5 @@ while True:
         print(" Solution: use only 16 bit wav files")
         print(" ")
         wait()
-        continue
     else:
         continue
