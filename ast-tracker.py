@@ -2,14 +2,14 @@ from __future__ import division
 
 print("Starting...")
 
-from numpy import linspace, arange, pi, int16, sin, zeros, float32, int16, frombuffer
+from numpy import linspace, arange, pi, sin, zeros, int16, frombuffer
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
-import wave, time, sys, os, random, base64, math
+import wave, os, random, base64
 import soundfile as sf
 
-title = "Ast-Tracker v1.3.0"
+title = "Ast-Tracker v1.3.1"
 def clear(): os.system("cls")
 clear()
 def wait(): os.system("pause")
@@ -39,17 +39,8 @@ settings("r")
 
 # sawtooth_gen(990.0, 5.0, 1)
 def sawtooth_gen(f_c, duration_s, amp):
-    t_samples = linspace(0, 1, int(duration_s * 44100))
-    waveform = f_c * t_samples
-    waveform_quiet = waveform * amp
-    waveform_ints = int16(waveform_quiet * 32768)
-    return(waveform_ints)
-
-
-# triangle_gen(990.0, 5.0, 1)
-def triangle_gen(f_c, duration_s, amp):
     t_samples = arange(44100 * duration_s) / 44100
-    waveform = signal.sawtooth(2 * pi * f_c * t_samples, 0.5)
+    waveform = f_c * t_samples
     waveform_quiet = waveform * amp
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
@@ -66,7 +57,7 @@ def sin_gen(f_c, duration_s, amp):
 # noise_gen(5.0, 1.0)
 def noise_gen(duration_s, amp):
     pure = linspace(0, 1, int(duration_s * 44100))
-    noise = random.normal(0, 1, pure.shape)
+    noise = nprandom.normal(0, 1, pure.shape)
     signal = pure + noise
     waveform_quiet = signal * amp
     waveform_ints = int16(waveform_quiet * 32768)
@@ -87,12 +78,14 @@ def guitar_gen(f_c, duration_s, amp):
 def sample_gen(sample_name):
     global setting_sample_pack
     try:
-        obj = wave.open(setting_sample_pack + "\\" + sample_name.lower() + ".wav", 'r')
+        obj = wave.open(setting_sample_pack + "\\" + sample_name + ".wav", 'r')
         sample_data = obj.readframes(obj.getnframes())
         obj.close()
+        return(sample_data)
     except FileNotFoundError:
-        print("Sample doesnt exist.")
-    return(sample_data)
+        print("Sample doesnt exist")
+        wait()
+        return False
 
 # write("example.wav", sawtooth_gen(...))
 def write(filename, data):
@@ -386,14 +379,14 @@ while True:
                     write(sngname + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
                 elif params[2]=="SIN":
                     write(sngname + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
-                elif params[2]=="TRE":
-                    write(sngname + ".wav", triangle_gen(float(params[0]), float(params[1]), float(params[3])))
                 elif params[2]=="GTR":
                     write(sngname + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
                 elif params[2]=="NSE":
                     write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
                 else: # sample logic
-                    write(sngname + ".wav", sample_gen(params[2]))
+                    result = sample_gen(params[2])
+                    if result!=False:
+                        write(sngname + ".wav", result)
                 print("Lines: " + str(i) + "/" + str(len(astsng)))
     elif mn_ch=="2":
         clear()
@@ -762,7 +755,6 @@ while True:
         print("Default instruments:")
         print(" Sawtooth wave - SWT")
         print(" Sine wave - SIN")
-        print(" Triangle wave - TRE")
         print(" Noise - NSE")
         print(" Guitar - GTR")
         print(" Delay - NN")
