@@ -9,13 +9,13 @@ from numpy import max as npmax
 import wave, os, random, base64
 import soundfile as sf
 
-title = "Ast-Tracker v1.3.1"
+title = "Ast-Tracker v1.3.2"
+
 def clear(): os.system("cls")
 clear()
 def wait(): os.system("pause")
 def delete(file): os.system("del /q " + file)
 
-# settings logic
 def settings(mode):
     global setting_sample_pack
     try:
@@ -128,17 +128,19 @@ def readfile(filename, type):
 while True:
     clear()
     print(title)
+    print(" ")
     print(" 1) .AST to .WAV converter")
     print(" 2) .AST editor")
     print(" 3) .AST tools")
     print(" 4) .WAV tools")
     print(" ")
     print(" 5) Settings")
-    print(" 0) Help")
+    print(" 6) Help")
+    print(" 0) About")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
-        prev_data = "" # bug fix
+        prev_data = ""
         clear()
         print(title)
         print(" .AST to .WAV converter")
@@ -373,7 +375,7 @@ while True:
                     if params[0]!="NN": # delay skip fix
                         print("Note doesnt exist. Skip.")
                         continue
-                if params[2]=="NN":
+                if params[2]=="NN" or params[0]=="NN":
                     write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
                 elif params[2]=="SWT":
                     write(sngname + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
@@ -394,9 +396,14 @@ while True:
         print(" .AST editor")
         print(" ")
         file = input("File (only name): ")
+        if file=="":
+            continue
         oldstuff = ""
+        fastmodeActive = False
         while True:
             clear()
+            print(title)
+            print(" .AST editor")
             try:
                 oldstuff = open(file + ".ast", "r").read()
             except FileNotFoundError:
@@ -416,20 +423,28 @@ while True:
             print(" Edit specific line - 'e' + number")
             print(" Delete specific line - 'd' + number")
             print(" Delete song - 'delete-song'")
+            print(" Fast mode switch - 'fm'")
             print(" New note - '' ")
-            ch = input(": ")
+            if fastmodeActive==True:
+                ch = input("[FAST MODE]: ")
+            elif fastmodeActive==False:
+                ch = input(": ")
             if ch=="":
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
-                inst = input("INST: ")
-                amp = input("AMPLITUDE: ")
-                f = open(file + ".ast", "w")
-                f.write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
+                if fastmodeActive==False:
+                    inst = input("INST: ")
+                    amp = input("AMPLITUDE: ")
+                elif fastmodeActive==True:
+                    # last line parser
+                    fast_prev_lines = oldlines[-1].split(" ")
+                    inst = fast_prev_lines[2]
+                    amp = fast_prev_lines[3]
+                open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
             elif ch=="m":
                 break
             elif ch=="u":
-                f = open(file + ".ast", "w")
-                f.write("!".join(oldlines[:-1]))
+                open(file + ".ast", "w").write("!".join(oldlines[:-1]))
             elif ch=="delete-song":
                 clear()
                 print("Are you sure?")
@@ -439,23 +454,25 @@ while True:
                     break
                 else:
                     continue
+            elif ch=="fm": # fast mode switcher
+                if fastmodeActive:
+                    fastmodeActive = False
+                else:
+                    fastmodeActive = True
             elif 'e' in ch:
                 line = ch.replace('e', '').replace(' ', '')
-                f = open(file + ".ast", "w")
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
                 inst = input("INST: ")
                 amp = input("AMPLITUDE: ")
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
-                f.write('!'.join(oldlines))
+                open(file + ".ast", "w").write('!'.join(oldlines))
             elif 'd' in ch:
                 line = ch.replace('d', '').replace(' ', '')
                 oldlines.pop(int(line))
-                f = open(file + ".ast", "w")
-                f.write('!'.join(oldlines))
+                open(file + ".ast", "w").write('!'.join(oldlines))
             else:
                 continue
-            f.close()
     elif mn_ch=="3":
         clear()
         print(title)
@@ -476,7 +493,7 @@ while True:
             filename = input("File (only name): ")
             speed = input("Speed (1.0): ")
             try:
-                speed = float(speed) # for avoiding bugs
+                speed = float(speed)
             except ValueError:
                 print("Couldnt convert '" + speed + "' to float.")
                 wait()
@@ -747,7 +764,7 @@ while True:
         else:
             continue
         settings("s")
-    elif mn_ch=="0":
+    elif mn_ch=="6":
         clear()
         print(title)
         print("Help")
@@ -763,6 +780,16 @@ while True:
         print(" Error: 'wave.Error: unknown format'")
         print(" Solution: use only 16 bit wav files")
         print(" ")
+        wait()
+    elif mn_ch=="0":
+        clear()
+        print(title)
+        print("About")
+        print("""
+Just a simple tracker
+Stay tuned for new releases! https://github.com/martynovegor/ast-tracker
+Copyright © 2022 martynovegor (MIT License)
+        """)
         wait()
     else:
         continue
