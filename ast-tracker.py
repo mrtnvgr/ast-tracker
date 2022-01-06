@@ -1,17 +1,18 @@
-from __future__ import division
-
 print("Starting...")
 
+import wave, os, random, base64, pyaudio, time, requests, urllib
 from numpy import linspace, arange, pi, sin, zeros, int16, frombuffer
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
-import wave, os, random, base64, pyaudio, time
 import soundfile as sf
 
 
-title = "Ast-Tracker v1.3.3"
+title = "Ast-Tracker v1.3.4"
+api_git_link = "https://api.github.com/repos/martynovegor/ast-tracker/releases/latest"
+download_link = "https://github.com/martynovegor/ast-tracker/releases/latest/download/ast-tracker.exe"
+version = "v1.3.4"
 
 def clear():
     if os.name=='nt':
@@ -185,6 +186,7 @@ while True:
             print(" Edit specific line - 'e' + number")
             print(" Delete specific line - 'd' + number")
             print(" Delete song - 'delete-song'")
+            print(" Fragment repeater - 'fr'")
             print(" Fast mode switcher (at least 1 line needed) - 'fm'")
             print(" Make .wav - 'make'")
             print(" Graphical player - 'play'")
@@ -496,10 +498,14 @@ while True:
                 continue
             if ch=="":
                 note = input("NOTE: ")
+                if note=="": continue
                 length = input("LENGTH: ")
+                if length=="": continue
                 if fastmodeActive==False:
                     inst = input("INST: ")
+                    if length=="": continue
                     amp = input("AMPLITUDE: ")
+                    if amp=="": amp = "1"
                 elif fastmodeActive==True:
                     # last line parser
                     fast_prev_lines = oldlines[-1].split(" ")
@@ -519,6 +525,15 @@ while True:
                     break
                 else:
                     continue
+            elif ch=="fr": # fragment repeater
+                try:
+                    start = int(input("Start line: "))
+                    stop = int(input("Stop line: "))+1
+                except ValueError:
+                    continue
+                for line in oldlines[start:stop]:
+                    oldstuff = open(file + ".ast", "r").read()
+                    open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + line)
             elif ch=="fm": # fast mode switcher
                 if fastmodeActive:
                     fastmodeActive = False
@@ -549,11 +564,11 @@ while True:
         print(title)
         print(" .AST tools")
         print(" 1) Speed changer")
-        print(" 2) Joiner")
-        print(" 3) Instrument replacer")
-        print(" 4) Pitcher")
-        print(" 5) Repeater")
-        print(" 6) Amplitude changer")
+        print(" 2) Pitch changer")
+        print(" 3) Amplitude changer")
+        print(" 4) Instrument replacer")
+        print(" 5) Joiner")
+        print(" 6) Repeater")
         print(" ")
         tl = input(": ")
         clear()
@@ -578,7 +593,7 @@ while True:
                     temp = i.split(" ")
                     f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
             f.close()
-        elif tl=="2":
+        elif tl=="5":
             print(title)
             print(" .AST joiner")
             print(" ")
@@ -591,7 +606,7 @@ while True:
                     continue
                 total_file_data = total_file_data + data.replace("\n", "")
             open(resultfile + ".ast", "w").write(total_file_data)
-        elif tl=="3":
+        elif tl=="4":
             print(title)
             print(" .AST instrument replacer")
             print(" ")
@@ -631,16 +646,16 @@ while True:
                                 dat[2] = ninst
                     data[i] = ' '.join(dat)
             open(filename + ".ast", "w").write('!'.join(data))
-        elif tl=="4":
+        elif tl=="2":
             clear()
             print(title)
-            print(" .AST Pitcher")
+            print(" .AST pitch changer")
             print(" ")
             filename = input("File (only name): ")
             data = readfile(filename + ".ast", "ast")
             if data==False:
                 continue
-            pc = input("Pitch: ")
+            pc = input("Pitch (half-octaves): ")
             data = data.split("!")
             if data=="":
                 continue
@@ -714,10 +729,10 @@ while True:
                     dat[0] = instrument
                     ndata.append(' '.join(dat))
             open(filename + ".ast", "w").write('!'.join(ndata))
-        elif tl=="5":
+        elif tl=="6":
             clear()
             print(title)
-            print(" .AST Repeater")
+            print(" .AST repeater")
             print(" ")
             filename = input("File (only name): ")
             data = readfile(filename + ".ast", "ast")
@@ -733,7 +748,7 @@ while True:
             if data[1]!="!": # '1' bug fix
                 data = data + "!"
             open(filename + ".ast", "w").write(data * count)
-        elif tl=="6":
+        elif tl=="3":
             clear()
             print(title)
             print(" .AST amplitude changer")
@@ -826,12 +841,31 @@ while True:
         print(" Pick:")
         print(" [1] Sample pack: " + setting_sample_pack.replace("\n", ""))
         print(" ")
-        print(" [0] Main menu")
+        print(" [0] Check for new updates")
+        print(" [m] Main menu")
         print(" ")
         ch = input(": ")
         if ch=="1":
             setting_sample_pack = input("New value: ")
         elif ch=="0":
+            git_version = requests.get(api_git_link).json()["name"]
+            if version!=git_version:
+                clear()
+                print(title)
+                print("New update! Version:" + git_version)
+                u_ch = input("Download update? (y/n): ").lower()
+                if u_ch=="y":
+                    urllib.request.urlretrieve(download_link, "ast-tracker-" + git_version + ".exe")
+                else:
+                    continue
+            else:
+                clear()
+                print(title)
+                print(" ")
+                print("You are using latest release!")
+                print(" ")
+                wait()
+        elif ch=="m":
             continue
         else:
             continue
