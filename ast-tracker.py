@@ -6,15 +6,29 @@ from numpy import linspace, arange, pi, sin, zeros, int16, frombuffer
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
-import wave, os, random, base64
+from numpy import min as npmin
+import wave, os, random, base64, pyaudio, time
 import soundfile as sf
 
-title = "Ast-Tracker v1.3.2"
 
-def clear(): os.system("cls")
+title = "Ast-Tracker v1.3.3"
+
+def clear():
+    if os.name=='nt':
+        os.system('cls')
+    else:
+        os.system("cls")
 clear()
-def wait(): os.system("pause")
-def delete(file): os.system("del /q " + file)
+def wait():
+    if os.name=='nt':
+        os.system("pause")
+    else:
+        os.system('read -n1 -r -p "Press any key to continue..."')
+def delete(file):
+    if os.name=='nt':
+        os.system("del /q /p " + file)
+    else:
+        os.system("rm " + file)
 
 def settings(mode):
     global setting_sample_pack
@@ -129,268 +143,16 @@ while True:
     clear()
     print(title)
     print(" ")
-    print(" 1) .AST to .WAV converter")
-    print(" 2) .AST editor")
-    print(" 3) .AST tools")
-    print(" 4) .WAV tools")
+    print(" 1) .AST editor")
+    print(" 2) .AST tools")
+    print(" 3) .WAV tools")
     print(" ")
-    print(" 5) Settings")
-    print(" 6) Help")
+    print(" 4) Settings")
+    print(" 5) Help")
     print(" 0) About")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
-        prev_data = ""
-        clear()
-        print(title)
-        print(" .AST to .WAV converter")
-        print(" ")
-        sngname = input("Song (only name): ")
-        astsng = readfile(sngname + ".ast", "ast")
-        if astsng==False:
-            continue
-        i = 0
-        astsng = astsng.split("!")
-        for section in astsng:
-            i = i + 1
-            if section!="":
-                params = section.split()
-                if params[0]=="C0":
-                    params[0] = 16.35
-                elif params[0]=="C#0":
-                    params[0] = 17.32
-                elif params[0]=="D0":
-                    params[0] = 18.35
-                elif params[0]=="D#0":
-                    params[0] = 19.45
-                elif params[0]=="E0":
-                    params[0] = 20.60
-                elif params[0]=="F0":
-                    params[0] = 21.83
-                elif params[0]=="F#0":
-                    params[0] = 23.12
-                elif params[0]=="G0":
-                    params[0] = 24.50
-                elif params[0]=="G#0":
-                    params[0] = 25.96
-                elif params[0]=="A0":
-                    params[0] = 27.50
-                elif params[0]=="A#0":
-                    params[0] = 29.14
-                elif params[0]=="B0":
-                    params[0] = 30.87
-                elif params[0]=="C1":
-                    params[0] = 32.70
-                elif params[0]=="C#1":
-                    params[0] = 34.65
-                elif params[0]=="D1":
-                    params[0] = 36.71
-                elif params[0]=="D#1":
-                    params[0] = 38.89
-                elif params[0]=="E1":
-                    params[0] = 41.20
-                elif params[0]=="F1":
-                    params[0] = 43.65
-                elif params[0]=="F#1":
-                    params[0] = 46.25
-                elif params[0]=="G1":
-                    params[0] = 49.00
-                elif params[0]=="G#1":
-                    params[0] = 51.91
-                elif params[0]=="A1":
-                    params[0] = 55.00
-                elif params[0]=="A#1":
-                    params[0] = 58.27
-                elif params[0]=="B1":
-                    params[0] = 61.74
-                elif params[0]=="C2":
-                    params[0] = 65.41
-                elif params[0]=="C#2":
-                    params[0] = 69.30
-                elif params[0]=="D2":
-                    params[0] = 73.42
-                elif params[0]=="D#2":
-                    params[0] = 77.78
-                elif params[0]=="E2":
-                    params[0] = 82.41
-                elif params[0]=="F2":
-                    params[0] = 87.31
-                elif params[0]=="F#2":
-                    params[0] = 92.50
-                elif params[0]=="G2":
-                    params[0] = 98.00
-                elif params[0]=="G#2":
-                    params[0] = 103.83
-                elif params[0]=="A2":
-                    params[0] = 110.00
-                elif params[0]=="A#2":
-                    params[0] = 116.54
-                elif params[0]=="B2":
-                    params[0] = 123.47
-                elif params[0]=="C3":
-                    params[0] = 130.81
-                elif params[0]=="C#3":
-                    params[0] = 138.59
-                elif params[0]=="D3":
-                    params[0] = 146.83
-                elif params[0]=="D#3":
-                    params[0] = 155.56
-                elif params[0]=="E3":
-                    params[0] = 164.81
-                elif params[0]=="F3":
-                    params[0] = 174.61
-                elif params[0]=="F#3":
-                    params[0] = 185.00
-                elif params[0]=="G3":
-                    params[0] = 196.00
-                elif params[0]=="G#3":
-                    params[0] = 207.65
-                elif params[0]=="A3":
-                    params[0] = 220.00
-                elif params[0]=="A#3":
-                    params[0] = 233.08
-                elif params[0]=="B3":
-                    params[0] = 246.94
-                elif params[0]=="C4":
-                    params[0] = 261.63
-                elif params[0]=="C#4":
-                    params[0] = 277.18
-                elif params[0]=="D4":
-                    params[0] = 293.66
-                elif params[0]=="D#4":
-                    params[0] = 311.13
-                elif params[0]=="E4":
-                    params[0] = 329.63
-                elif params[0]=="F4":
-                    params[0] = 349.23
-                elif params[0]=="F#4":
-                    params[0] = 369.99
-                elif params[0]=="G4":
-                    params[0] = 392.00
-                elif params[0]=="G#4":
-                    params[0] = 415.30
-                elif params[0]=="A4":
-                    params[0] = 440.00
-                elif params[0]=="A#4":
-                    params[0] = 466.16
-                elif params[0]=="B4":
-                    params[0] = 493.88
-                elif params[0]=="C5":
-                    params[0] = 523.25
-                elif params[0]=="C#5":
-                    params[0] = 554.37
-                elif params[0]=="D5":
-                    params[0] = 587.33
-                elif params[0]=="D#5":
-                    params[0] = 622.25
-                elif params[0]=="E5":
-                    params[0] = 659.25
-                elif params[0]=="F5":
-                    params[0] = 698.46
-                elif params[0]=="F#5":
-                    params[0] = 739.99
-                elif params[0]=="G5":
-                    params[0] = 783.99
-                elif params[0]=="G#5":
-                    params[0] = 830.61
-                elif params[0]=="A5":
-                    params[0] = 880.00
-                elif params[0]=="A#5":
-                    params[0] = 932.33
-                elif params[0]=="B5":
-                    params[0] = 987.77
-                elif params[0]=="C6":
-                    params[0] = 1046.50
-                elif params[0]=="C#6":
-                    params[0] = 1108.73
-                elif params[0]=="D6":
-                    params[0] = 1174.66
-                elif params[0]=="D#6":
-                    params[0] = 1244.51
-                elif params[0]=="E6":
-                    params[0] = 1318.51
-                elif params[0]=="F6":
-                    params[0] = 1396.91
-                elif params[0]=="F#6":
-                    params[0] = 1479.98
-                elif params[0]=="G6":
-                    params[0] = 1567.98
-                elif params[0]=="G#6":
-                    params[0] = 1661.22
-                elif params[0]=="A6":
-                    params[0] = 1760.00
-                elif params[0]=="A#6":
-                    params[0] = 1864.66
-                elif params[0]=="B6":
-                    params[0] = 1975.53
-                elif params[0]=="C7":
-                    params[0] = 2093.00
-                elif params[0]=="C#7":
-                    params[0] = 2217.46
-                elif params[0]=="D7":
-                    params[0] = 2349.32
-                elif params[0]=="D#7":
-                    params[0] = 2489.02
-                elif params[0]=="E7":
-                    params[0] = 2637.02
-                elif params[0]=="F7":
-                    params[0] = 2793.83
-                elif params[0]=="F#7":
-                    params[0] = 2959.96
-                elif params[0]=="G7":
-                    params[0] = 3135.96
-                elif params[0]=="G#7":
-                    params[0] = 3322.44
-                elif params[0]=="A7":
-                    params[0] = 3520.00
-                elif params[0]=="A#7":
-                    params[0] = 3729.31
-                elif params[0]=="B7":
-                    params[0] = 3951.07
-                elif params[0]=="C8":
-                    params[0] = 4186.01
-                elif params[0]=="C#8":
-                    params[0] = 4434.92
-                elif params[0]=="D8":
-                    params[0] = 4698.63
-                elif params[0]=="D#8":
-                    params[0] = 5274.04
-                elif params[0]=="E8":
-                    params[0] = 5274.04
-                elif params[0]=="F8":
-                    params[0] = 5587.65
-                elif params[0]=="F#8":
-                    params[0] = 5919.91
-                elif params[0]=="G8":
-                    params[0] = 6271.93
-                elif params[0]=="G#8":
-                    params[0] = 6644.88
-                elif params[0]=="A8":
-                    params[0] = 7040.00
-                elif params[0]=="A#8":
-                    params[0] = 7458.62
-                elif params[0]=="B8":
-                    params[0] = 7902.13
-                else:
-                    if params[0]!="NN": # delay skip fix
-                        print("Note doesnt exist. Skip.")
-                        continue
-                if params[2]=="NN" or params[0]=="NN":
-                    write(sngname + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
-                elif params[2]=="SWT":
-                    write(sngname + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
-                elif params[2]=="SIN":
-                    write(sngname + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
-                elif params[2]=="GTR":
-                    write(sngname + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
-                elif params[2]=="NSE":
-                    write(sngname + ".wav", noise_gen(float(params[1]), float(params[3])))
-                else: # sample logic
-                    result = sample_gen(params[2])
-                    if result!=False:
-                        write(sngname + ".wav", result)
-                print("Lines: " + str(i) + "/" + str(len(astsng)))
-    elif mn_ch=="2":
         clear()
         print(title)
         print(" .AST editor")
@@ -403,12 +165,12 @@ while True:
         while True:
             clear()
             print(title)
-            print(" .AST editor")
+            print(" .AST editor [Current song: " + file + "]")
             try:
                 oldstuff = open(file + ".ast", "r").read()
             except FileNotFoundError:
                 pass
-            print(" Current file: " + file + ".ast")
+            print(" ")
             print("[NOTE] [LENGTH] [INSTR] [AMP]")
             oldlines = oldstuff.split("!")
             if oldlines[0]=="":
@@ -418,17 +180,320 @@ while True:
                 n = n + 1
                 print("[" + str(n) + "] " + i)
             print(" ")
-            print(" Delete last line - 'u' ")
             print(" Go to menu - 'm' ")
+            print(" Delete last line - 'u' ")
             print(" Edit specific line - 'e' + number")
             print(" Delete specific line - 'd' + number")
             print(" Delete song - 'delete-song'")
-            print(" Fast mode switch - 'fm'")
+            print(" Fast mode switcher (at least 1 line needed) - 'fm'")
+            print(" Make .wav - 'make'")
+            print(" Graphical player - 'play'")
             print(" New note - '' ")
             if fastmodeActive==True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
+            if ch=='make' or ch=='play':
+                prev_data = ""
+                astsng = readfile(file + ".ast", "ast").split("!")
+                i = 0
+                if ch=='make':
+                    try:
+                        open(file + ".wav", "r") # deleting old builds
+                        os.remove(file + ".wav")
+                    except FileNotFoundError:
+                        pass
+                elif ch=='play':
+                    str_note = []
+                    length_note = []
+                    instrument_note = []
+                    amp_note = []
+                    data_note = []
+                for section in astsng:
+                    i = i + 1
+                    if section!="":
+                        params = section.split()
+                        if ch=='play': # string note for player
+                            str_note.append(params[0])
+                            length_note.append(params[1])
+                            instrument_note.append(params[2])
+                            amp_note.append(params[3])
+                        if params[0]=="C0":
+                            params[0] = 16.35
+                        elif params[0]=="C#0":
+                            params[0] = 17.32
+                        elif params[0]=="D0":
+                            params[0] = 18.35
+                        elif params[0]=="D#0":
+                            params[0] = 19.45
+                        elif params[0]=="E0":
+                            params[0] = 20.60
+                        elif params[0]=="F0":
+                            params[0] = 21.83
+                        elif params[0]=="F#0":
+                            params[0] = 23.12
+                        elif params[0]=="G0":
+                            params[0] = 24.50
+                        elif params[0]=="G#0":
+                            params[0] = 25.96
+                        elif params[0]=="A0":
+                            params[0] = 27.50
+                        elif params[0]=="A#0":
+                            params[0] = 29.14
+                        elif params[0]=="B0":
+                            params[0] = 30.87
+                        elif params[0]=="C1":
+                            params[0] = 32.70
+                        elif params[0]=="C#1":
+                            params[0] = 34.65
+                        elif params[0]=="D1":
+                            params[0] = 36.71
+                        elif params[0]=="D#1":
+                            params[0] = 38.89
+                        elif params[0]=="E1":
+                            params[0] = 41.20
+                        elif params[0]=="F1":
+                            params[0] = 43.65
+                        elif params[0]=="F#1":
+                            params[0] = 46.25
+                        elif params[0]=="G1":
+                            params[0] = 49.00
+                        elif params[0]=="G#1":
+                            params[0] = 51.91
+                        elif params[0]=="A1":
+                            params[0] = 55.00
+                        elif params[0]=="A#1":
+                            params[0] = 58.27
+                        elif params[0]=="B1":
+                            params[0] = 61.74
+                        elif params[0]=="C2":
+                            params[0] = 65.41
+                        elif params[0]=="C#2":
+                            params[0] = 69.30
+                        elif params[0]=="D2":
+                            params[0] = 73.42
+                        elif params[0]=="D#2":
+                            params[0] = 77.78
+                        elif params[0]=="E2":
+                            params[0] = 82.41
+                        elif params[0]=="F2":
+                            params[0] = 87.31
+                        elif params[0]=="F#2":
+                            params[0] = 92.50
+                        elif params[0]=="G2":
+                            params[0] = 98.00
+                        elif params[0]=="G#2":
+                            params[0] = 103.83
+                        elif params[0]=="A2":
+                            params[0] = 110.00
+                        elif params[0]=="A#2":
+                            params[0] = 116.54
+                        elif params[0]=="B2":
+                            params[0] = 123.47
+                        elif params[0]=="C3":
+                            params[0] = 130.81
+                        elif params[0]=="C#3":
+                            params[0] = 138.59
+                        elif params[0]=="D3":
+                            params[0] = 146.83
+                        elif params[0]=="D#3":
+                            params[0] = 155.56
+                        elif params[0]=="E3":
+                            params[0] = 164.81
+                        elif params[0]=="F3":
+                            params[0] = 174.61
+                        elif params[0]=="F#3":
+                            params[0] = 185.00
+                        elif params[0]=="G3":
+                            params[0] = 196.00
+                        elif params[0]=="G#3":
+                            params[0] = 207.65
+                        elif params[0]=="A3":
+                            params[0] = 220.00
+                        elif params[0]=="A#3":
+                            params[0] = 233.08
+                        elif params[0]=="B3":
+                            params[0] = 246.94
+                        elif params[0]=="C4":
+                            params[0] = 261.63
+                        elif params[0]=="C#4":
+                            params[0] = 277.18
+                        elif params[0]=="D4":
+                            params[0] = 293.66
+                        elif params[0]=="D#4":
+                            params[0] = 311.13
+                        elif params[0]=="E4":
+                            params[0] = 329.63
+                        elif params[0]=="F4":
+                            params[0] = 349.23
+                        elif params[0]=="F#4":
+                            params[0] = 369.99
+                        elif params[0]=="G4":
+                            params[0] = 392.00
+                        elif params[0]=="G#4":
+                            params[0] = 415.30
+                        elif params[0]=="A4":
+                            params[0] = 440.00
+                        elif params[0]=="A#4":
+                            params[0] = 466.16
+                        elif params[0]=="B4":
+                            params[0] = 493.88
+                        elif params[0]=="C5":
+                            params[0] = 523.25
+                        elif params[0]=="C#5":
+                            params[0] = 554.37
+                        elif params[0]=="D5":
+                            params[0] = 587.33
+                        elif params[0]=="D#5":
+                            params[0] = 622.25
+                        elif params[0]=="E5":
+                            params[0] = 659.25
+                        elif params[0]=="F5":
+                            params[0] = 698.46
+                        elif params[0]=="F#5":
+                            params[0] = 739.99
+                        elif params[0]=="G5":
+                            params[0] = 783.99
+                        elif params[0]=="G#5":
+                            params[0] = 830.61
+                        elif params[0]=="A5":
+                            params[0] = 880.00
+                        elif params[0]=="A#5":
+                            params[0] = 932.33
+                        elif params[0]=="B5":
+                            params[0] = 987.77
+                        elif params[0]=="C6":
+                            params[0] = 1046.50
+                        elif params[0]=="C#6":
+                            params[0] = 1108.73
+                        elif params[0]=="D6":
+                            params[0] = 1174.66
+                        elif params[0]=="D#6":
+                            params[0] = 1244.51
+                        elif params[0]=="E6":
+                            params[0] = 1318.51
+                        elif params[0]=="F6":
+                            params[0] = 1396.91
+                        elif params[0]=="F#6":
+                            params[0] = 1479.98
+                        elif params[0]=="G6":
+                            params[0] = 1567.98
+                        elif params[0]=="G#6":
+                            params[0] = 1661.22
+                        elif params[0]=="A6":
+                            params[0] = 1760.00
+                        elif params[0]=="A#6":
+                            params[0] = 1864.66
+                        elif params[0]=="B6":
+                            params[0] = 1975.53
+                        elif params[0]=="C7":
+                            params[0] = 2093.00
+                        elif params[0]=="C#7":
+                            params[0] = 2217.46
+                        elif params[0]=="D7":
+                            params[0] = 2349.32
+                        elif params[0]=="D#7":
+                            params[0] = 2489.02
+                        elif params[0]=="E7":
+                            params[0] = 2637.02
+                        elif params[0]=="F7":
+                            params[0] = 2793.83
+                        elif params[0]=="F#7":
+                            params[0] = 2959.96
+                        elif params[0]=="G7":
+                            params[0] = 3135.96
+                        elif params[0]=="G#7":
+                            params[0] = 3322.44
+                        elif params[0]=="A7":
+                            params[0] = 3520.00
+                        elif params[0]=="A#7":
+                            params[0] = 3729.31
+                        elif params[0]=="B7":
+                            params[0] = 3951.07
+                        elif params[0]=="C8":
+                            params[0] = 4186.01
+                        elif params[0]=="C#8":
+                            params[0] = 4434.92
+                        elif params[0]=="D8":
+                            params[0] = 4698.63
+                        elif params[0]=="D#8":
+                            params[0] = 5274.04
+                        elif params[0]=="E8":
+                            params[0] = 5274.04
+                        elif params[0]=="F8":
+                            params[0] = 5587.65
+                        elif params[0]=="F#8":
+                            params[0] = 5919.91
+                        elif params[0]=="G8":
+                            params[0] = 6271.93
+                        elif params[0]=="G#8":
+                            params[0] = 6644.88
+                        elif params[0]=="A8":
+                            params[0] = 7040.00
+                        elif params[0]=="A#8":
+                            params[0] = 7458.62
+                        elif params[0]=="B8":
+                            params[0] = 7902.13
+                        else:
+                            if params[0]!="NN": # delay skip fix
+                                print("Note doesnt exist. Skip.")
+                                continue
+                        if ch=='make':
+                            if params[2]=="NN" or params[0]=="NN":
+                                write(file + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
+                            elif params[2]=="SWT":
+                                write(file + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
+                            elif params[2]=="SIN":
+                                write(file + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
+                            elif params[2]=="GTR":
+                                write(file + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
+                            elif params[2]=="NSE":
+                                write(file + ".wav", noise_gen(float(params[1]), float(params[3])))
+                            else: # sample logic
+                                result = sample_gen(params[2])
+                                if result!=False:
+                                    write(file + ".wav", result)
+                            print("Line: " + str(i) + "/" + str(len(astsng)))
+                        elif ch=='play':
+                            if params[2]=="NN" or params[0]=="NN":
+                                data_note.append(sawtooth_gen(1.0, float(params[1]), 0))
+                            elif params[2]=="SWT":
+                                data_note.append(sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
+                            elif params[2]=="SIN":
+                                data_note.append(sin_gen(float(params[0]), float(params[1]), float(params[3])))
+                            elif params[2]=="GTR":
+                                data_note.append(guitar_gen(float(params[0]), float(params[1]), float(params[3])))
+                            elif params[2]=="NSE":
+                                data_note.append(noise_gen(float(params[1]), float(params[3])))
+                            else: # sample logic
+                                result = sample_gen(params[2])
+                                if result!=False:
+                                    data_note.append(result)
+                            print("Parsing line: " + str(i) + "/" + str(len(astsng)))
+                if ch=='play':
+                    p = pyaudio.PyAudio()
+                    stream = p.open(format=pyaudio.paInt16,
+                                    channels=2,
+                                    rate=44100,
+                                    output=True)
+                    i = -1
+                    while True:
+                        if i==len(str_note)-1:
+                            break
+                        i = i + 1
+                        clear()
+                        print(".AST Player [Current song: " + file + "]")
+                        print(" ")
+                        print("Note: " + str_note[i])
+                        print("Length: " + length_note[i])
+                        print("Instrument: " + instrument_note[i])
+                        print("Amplitude: " + amp_note[i])
+                        print(" ")
+                        print(" ")
+                        stream.write(data_note[i])
+                    stream.stop_stream()
+                    stream.close()
+                continue
             if ch=="":
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
@@ -458,22 +523,28 @@ while True:
                 if fastmodeActive:
                     fastmodeActive = False
                 else:
-                    fastmodeActive = True
+                    if oldlines!=[]: # bug fix
+                        fastmodeActive = True
             elif 'e' in ch:
                 line = ch.replace('e', '').replace(' ', '')
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
-                inst = input("INST: ")
-                amp = input("AMPLITUDE: ")
+                if fastmodeActive==False:
+                    inst = input("INST: ")
+                    amp = input("AMPLITUDE: ")
+                elif fastmodeActive==True:
+                    # last line parser
+                    fast_prev_lines = oldlines[-1].split(" ")
+                    inst = fast_prev_lines[2]
+                    amp = fast_prev_lines[3]
+                open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
                 open(file + ".ast", "w").write('!'.join(oldlines))
             elif 'd' in ch:
                 line = ch.replace('d', '').replace(' ', '')
                 oldlines.pop(int(line))
                 open(file + ".ast", "w").write('!'.join(oldlines))
-            else:
-                continue
-    elif mn_ch=="3":
+    elif mn_ch=="2":
         clear()
         print(title)
         print(" .AST tools")
@@ -686,7 +757,7 @@ while True:
             open(filename + ".ast", "w").write('!'.join(ndata))
         else:
             continue
-    elif mn_ch=="4":
+    elif mn_ch=="3":
         clear()
         print(title)
         print(" .WAV tools")
@@ -748,12 +819,13 @@ while True:
                 write(filename + ".wav", sound)
         else:
             continue
-    elif mn_ch=="5": # settings
+    elif mn_ch=="4": # settings
         clear()
         print(title)
         print(" Settings")
         print(" Pick:")
-        print(" [1] Sample pack: " + setting_sample_pack)
+        print(" [1] Sample pack: " + setting_sample_pack.replace("\n", ""))
+        print(" ")
         print(" [0] Main menu")
         print(" ")
         ch = input(": ")
@@ -764,7 +836,7 @@ while True:
         else:
             continue
         settings("s")
-    elif mn_ch=="6":
+    elif mn_ch=="5":
         clear()
         print(title)
         print("Help")
