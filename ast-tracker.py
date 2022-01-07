@@ -9,16 +9,16 @@ from numpy import min as npmin
 import soundfile as sf
 
 
-title = "Ast-Tracker v1.3.4"
+title = "Ast-Tracker v1.3.5"
 api_git_link = "https://api.github.com/repos/martynovegor/ast-tracker/releases/latest"
 download_link = "https://github.com/martynovegor/ast-tracker/releases/latest/download/ast-tracker.exe"
-version = "v1.3.4"
+version = "v1.3.5"
 
 def clear():
     if os.name=='nt':
         os.system('cls')
     else:
-        os.system("cls")
+        os.system("clear")
 clear()
 def wait():
     if os.name=='nt':
@@ -69,6 +69,7 @@ def sin_gen(f_c, duration_s, amp):
     waveform_ints = int16(waveform_quiet * 32768)
     return(waveform_ints)
 
+# White noise
 # noise_gen(5.0, 1.0)
 def noise_gen(duration_s, amp):
     pure = linspace(0, 1, int(duration_s * 44100))
@@ -89,6 +90,17 @@ def guitar_gen(f_c, duration_s, amp):
     samples = samples / npmax(npabs(samples))
     waveform_quiet = samples * amp
     return int16(waveform_quiet * 32768)
+
+def pitched_nse_gen(f_c, duration_s, amp):
+    noise = nprandom.uniform(-1, 1, int(44100/f_c))
+    samples = zeros(int(44100*duration_s))
+    for i in range(len(noise)):
+        samples[i] = noise[i]
+    for i in range(len(noise), len(samples)):
+        samples[i] = (samples[i-len(noise)])
+    samples = samples / npmax(npabs(samples))
+    waveform_quiet = samples * amp
+    return int16(waveform_quiet * 32768) # NOTE: pitched noise function (maybe temporary)
 
 def sample_gen(sample_name):
     global setting_sample_pack
@@ -183,6 +195,7 @@ while True:
             print(" ")
             print(" Go to menu - 'm' ")
             print(" Delete last line - 'u' ")
+            print(" Repeat last line - 'r' ")
             print(" Edit specific line - 'e' + number")
             print(" Delete specific line - 'd' + number")
             print(" Delete song - 'delete-song'")
@@ -451,6 +464,8 @@ while True:
                                 write(file + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
                             elif params[2]=="NSE":
                                 write(file + ".wav", noise_gen(float(params[1]), float(params[3])))
+                            elif params[2]=="PSE":
+                                write(file + ".wav", pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
                             else: # sample logic
                                 result = sample_gen(params[2])
                                 if result!=False:
@@ -467,6 +482,8 @@ while True:
                                 data_note.append(guitar_gen(float(params[0]), float(params[1]), float(params[3])))
                             elif params[2]=="NSE":
                                 data_note.append(noise_gen(float(params[1]), float(params[3])))
+                            elif params[2]=="PSE":
+                                data_note.append(pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
                             else: # sample logic
                                 result = sample_gen(params[2])
                                 if result!=False:
@@ -516,6 +533,12 @@ while True:
                 break
             elif ch=="u":
                 open(file + ".ast", "w").write("!".join(oldlines[:-1]))
+            elif ch=="r":
+                try:
+                    oldlines.append(oldlines[-1])
+                    open(file + ".ast", "w").write("!".join(oldlines))
+                except IndexError:
+                    pass
             elif ch=="delete-song":
                 clear()
                 print("Are you sure?")
@@ -776,7 +799,7 @@ while True:
         clear()
         print(title)
         print(" .WAV tools")
-        print(" 1) .WAV to one string Converter")
+        print(" 1) .WAV to one string converter")
         print(" 2) Joiner")
         print(" 3) Repeater")
         print(" ")
@@ -785,7 +808,7 @@ while True:
         if tl=="1":
             clear()
             print(title)
-            print(" .WAV to one string Converter")
+            print(" .WAV to one string converter")
             print(" ")
             filename = input(".WAV File (only name): ")
             outputfile = input("Output File (*): ")
@@ -879,6 +902,7 @@ while True:
         print(" Sawtooth wave - SWT")
         print(" Sine wave - SIN")
         print(" Noise - NSE")
+        print(" Pitched noise wave - PSE")
         print(" Guitar - GTR")
         print(" Delay - NN")
         print(" ")
