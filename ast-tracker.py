@@ -30,7 +30,7 @@ def delete(file):
     else:
         os.system("rm " + file)
 
-def settings(mode):
+def settings_func(mode):
     global settings
     try:
         settings = json.loads(open("settings.json", "r").read())
@@ -53,7 +53,7 @@ def settings(mode):
                 wait()
     elif mode=="s":
         json.dump(settings, open("settings.json", "w"), indent=4)
-settings("r")
+settings_func("r")
 
 # sawtooth_gen(990.0, 5.0, 1)
 def sawtooth_gen(f_c, duration_s, amp):
@@ -895,7 +895,7 @@ while True:
             continue
         else:
             continue
-        settings("s")
+        settings_func("s")
     elif mn_ch=="5":
         clear()
         print(title)
