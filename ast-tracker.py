@@ -1,6 +1,6 @@
 print("Starting...")
 
-import wave, os, random, base64, pyaudio, time, requests, urllib
+import wave, os, random, base64, pyaudio, time, requests, urllib, json
 from numpy import linspace, arange, pi, sin, zeros, int16, frombuffer
 from numpy import random as nprandom
 from numpy import abs as npabs
@@ -8,11 +8,10 @@ from numpy import max as npmax
 from numpy import min as npmin
 import soundfile as sf
 
-
-title = "Ast-Tracker v1.3.5"
+title = "Ast-Tracker v1.3.5-1"
 api_git_link = "https://api.github.com/repos/martynovegor/ast-tracker/releases/latest"
 download_link = "https://github.com/martynovegor/ast-tracker/releases/latest/download/ast-tracker.exe"
-version = "v1.3.5"
+version = "v1.3.5-1"
 
 def clear():
     if os.name=='nt':
@@ -32,24 +31,28 @@ def delete(file):
         os.system("rm " + file)
 
 def settings(mode):
-    global setting_sample_pack
+    global settings
     try:
-        settings_lines = open("settings.as", "r").readlines()
+        settings = json.loads(open("settings.json", "r").read())
     except FileNotFoundError:
-        print("Couldnt find settings file. Creating...")
-        open("settings.as", "w").write("sample_pack = default")
-        settings_lines = open("settings.as", "r").readlines()
+        settings = {
+            'sample_folder': 'default'
+        }
+        json.dump(settings, open("settings.json", "w"), indent=4)
     if mode=="r":
-        for settings_line in settings_lines:
-            if "sample_pack" in settings_line:
-                setting_sample_pack = settings_line.replace("sample_pack = ", "")
+        settings = json.loads(open("settings.json", "r").read())
+        # required settings check
+        for sett in ['sample_folder']:
+            if sett in settings:
+                pass
+            else:
+                print("Setting not found: " + sett)
+                print("Please check your settings file! Default value will be used.")
+                if sett=="sample_folder":
+                    settings['sample_folder'] = 'default'
+                wait()
     elif mode=="s":
-        i = -1
-        for settings_line in settings_lines:
-            i += 1
-            if "sample_pack" in settings_line:
-                settings_lines[i] = "sample_pack = " + setting_sample_pack
-        open("settings.as", "w").writelines(settings_lines)
+        json.dump(settings, open("settings.json", "w"), indent=4)
 settings("r")
 
 # sawtooth_gen(990.0, 5.0, 1)
@@ -103,9 +106,9 @@ def pitched_nse_gen(f_c, duration_s, amp):
     return int16(waveform_quiet * 32768) # NOTE: pitched noise function (maybe temporary)
 
 def sample_gen(sample_name):
-    global setting_sample_pack
+    global settings
     try:
-        obj = wave.open(setting_sample_pack + "\\" + sample_name + ".wav", 'r')
+        obj = wave.open(settings['sample_folder'] + "\\" + sample_name + ".wav", 'r')
         sample_data = obj.readframes(obj.getnframes())
         obj.close()
         return(sample_data)
@@ -140,7 +143,7 @@ def readfile(filename, type):
             obj.close()
             return sound
         except FileNotFoundError:
-            print("File " + filename + " doesnt exist.")
+            print("File " + filename + " doesn't exist")
             wait()
             return False
     try:
@@ -148,7 +151,7 @@ def readfile(filename, type):
         return data
     except FileNotFoundError:
         clear()
-        print(" File " + filename + " doesn't exist!")
+        print(" File " + filename + " doesn't exist")
         wait()
         return False
 
@@ -451,7 +454,7 @@ while True:
                             params[0] = 7902.13
                         else:
                             if params[0]!="NN": # delay skip fix
-                                print("Note doesnt exist. Skip.")
+                                print("Note doesn't exist. Skip.")
                                 continue
                         if ch=='make':
                             if params[2]=="NN" or params[0]=="NN":
@@ -589,7 +592,7 @@ while True:
         print(" 1) Speed changer")
         print(" 2) Pitch changer")
         print(" 3) Amplitude changer")
-        print(" 4) Instrument replacer")
+        print(" 4) Instrument changer")
         print(" 5) Joiner")
         print(" 6) Repeater")
         print(" ")
@@ -604,7 +607,7 @@ while True:
             try:
                 speed = float(speed)
             except ValueError:
-                print("Couldnt convert '" + speed + "' to float.")
+                print("Couldn't convert '" + speed + "' to float.")
                 wait()
                 continue
             data = readfile(filename + ".ast", "ast")
@@ -631,11 +634,11 @@ while True:
             open(resultfile + ".ast", "w").write(total_file_data)
         elif tl=="4":
             print(title)
-            print(" .AST instrument replacer")
+            print(" .AST instrument changer")
             print(" ")
-            print(" 1) Replace all instruments to ...")
-            print(" 2) Replace ... instrument to ...")
-            print(" 3) Replace ... instrument to random instrument from ...")
+            print(" 1) Change all instruments to ...")
+            print(" 2) Change ... instrument to ...")
+            print(" 3) Change ... instrument to random instrument from ...")
             ch = input(": ")
             if ch!="1" and ch!="2" and ch!="3":
                 continue
@@ -862,14 +865,14 @@ while True:
         print(title)
         print(" Settings")
         print(" Pick:")
-        print(" [1] Sample pack: " + setting_sample_pack.replace("\n", ""))
+        print(" [1] Sample pack: " + settings['sample_folder'])
         print(" ")
         print(" [0] Check for new updates")
         print(" [m] Main menu")
         print(" ")
         ch = input(": ")
         if ch=="1":
-            setting_sample_pack = input("New value: ")
+            settings['sample_folder'] = input("New value: ")
         elif ch=="0":
             git_version = requests.get(api_git_link).json()["name"]
             if version!=git_version:
