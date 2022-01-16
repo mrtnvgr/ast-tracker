@@ -1,17 +1,16 @@
 print("Starting...")
 
-import wave, os, random, base64, pyaudio, time, requests, urllib, json
-from numpy import linspace, arange, pi, sin, zeros, int16, frombuffer
+import wave, os, random, time, requests, urllib, json
+from numpy import linspace, arange, pi, sin, zeros, int16
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
-import soundfile as sf
 
-title = "Ast-Tracker v1.3.5-1"
+title = "Ast-Tracker v1.3.7"
 api_git_link = "https://api.github.com/repos/martynovegor/ast-tracker/releases/latest"
 download_link = "https://github.com/martynovegor/ast-tracker/releases/latest/download/ast-tracker.exe"
-version = "v1.3.5-1"
+version = "v1.3.7"
 
 def clear():
     if os.name=='nt':
@@ -106,7 +105,6 @@ def pitched_nse_gen(f_c, duration_s, amp):
     return int16(waveform_quiet * 32768) # NOTE: pitched noise function (maybe temporary)
 
 def sample_gen(sample_name):
-    global settings
     try:
         obj = wave.open(settings['sample_folder'] + "\\" + sample_name + ".wav", 'r')
         sample_data = obj.readframes(obj.getnframes())
@@ -178,6 +176,8 @@ while True:
             continue
         oldstuff = ""
         fastmodeActive = False
+        view_mode = "ALL"
+        view_mode_lines = 0
         while True:
             clear()
             print(title)
@@ -186,15 +186,38 @@ while True:
                 oldstuff = open(file + ".ast", "r").read()
             except FileNotFoundError:
                 pass
+            if view_mode=="ALL":
+                print("[VIEW MODE: " + view_mode + "]")
+            elif "FT" in view_mode: #TODO: viewer
+                lines_list = view_mode.replace("FT", "").split("-")
+                print("[VIEW MODE: FROM " + lines_list[0] + " TO " + lines_list[1] + " LINE")
+            else:
+                print("[VIEW MODE: " + view_mode + " " + str(view_mode_lines) + " LINES]")
             print(" ")
             print("[NOTE] [LENGTH] [INSTR] [AMP]")
             oldlines = oldstuff.split("!")
             if oldlines[0]=="":
                 oldlines.pop(0) # [0] empty string bug fix
             n = -1
-            for i in oldlines:
-                n = n + 1
-                print("[" + str(n) + "] " + i)
+            if view_mode=="ALL":
+                for i in oldlines:
+                    n = n + 1
+                    print("[" + str(n) + "] " + i)
+            elif view_mode=="FIRST":
+                for i in oldlines[:view_mode_lines]:
+                    n = n + 1
+                    print("[" + str(n) + "] " + i)
+            elif view_mode=="LAST":
+                n = len(oldlines)-len(oldlines[-view_mode_lines:])-1
+                for i in oldlines[-view_mode_lines:]:
+                    n = n + 1
+                    print("[" + str(n) + "] " + i)
+            elif "FT" in view_mode:
+                lines_list = view_mode.replace("FT", "").split("-")
+                n = int(lines_list[0])-1
+                for i in oldlines[int(lines_list[0]):int(lines_list[1])+1]:
+                    n = n + 1
+                    print("[" + str(n) + "] " + i)
             print(" ")
             print(" Go to menu - 'm' ")
             print(" Delete last line - 'u' ")
@@ -203,39 +226,65 @@ while True:
             print(" Delete specific line - 'd' + number")
             print(" Delete song - 'delete-song'")
             print(" Fragment repeater - 'fr'")
+            print(" View mode - 'v-' + mode")
             print(" Fast mode switcher (at least 1 line needed) - 'fm'")
-            print(" Make .wav - 'make'")
-            print(" Graphical player - 'play'")
+            print(" Make .wav - 'make', 'make(start)-(end)'")
             print(" New note - '' ")
             if fastmodeActive==True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
-            if ch=='make' or ch=='play':
-                prev_data = ""
-                astsng = readfile(file + ".ast", "ast").split("!")
-                i = 0
-                if ch=='make':
+            if "v-" in ch: # view mode changer
+                tvm = ch.replace("v-", "").upper()
+                if tvm=="ALL": # all view mode
+                    view_mode = tvm
+                elif "F" in tvm: # first view mode
+                    view_mode = "FIRST"
                     try:
-                        open(file + ".wav", "r") # deleting old builds
-                        os.remove(file + ".wav")
-                    except FileNotFoundError:
-                        pass
-                elif ch=='play':
-                    str_note = []
-                    length_note = []
-                    instrument_note = []
-                    amp_note = []
-                    data_note = []
+                        view_mode_lines = int(tvm.replace("F", ""))
+                    except ValueError:
+                        continue
+                elif "L" in tvm: # last view mode
+                    view_mode = "LAST"
+                    try:
+                        view_mode_lines = int(tvm.replace("L", ""))
+                    except ValueError:
+                        continue
+                elif "-" in tvm: # from-to view mode
+                    view_mode = "FT" + tvm.split("-")[0] + "-" + tvm.split("-")[1]
+            if ch=="": # empty string
+                note = input("NOTE: ")
+                if note=="": continue
+                length = input("LENGTH: ")
+                if length=="": continue
+                if fastmodeActive==False:
+                    inst = input("INST: ")
+                    if length=="": continue
+                    amp = input("AMPLITUDE: ")
+                    if amp=="": amp = "1"
+                elif fastmodeActive==True:
+                    # last line parser
+                    fast_prev_lines = oldlines[-1].split(" ")
+                    inst = fast_prev_lines[2]
+                    amp = fast_prev_lines[3]
+                open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
+                continue
+            if "make" in ch or ch=="make":
+                prev_data = ""
+                astsng = oldstuff.split("!")
+                i = 0
+                try:
+                    open(file + ".wav", "r") # deleting old builds
+                    os.remove(file + ".wav")
+                except FileNotFoundError:
+                    pass
                 for section in astsng:
+                    if "-" in ch: # line to line mode
+                        if ch.replace("make","").split("-")[0]>str(i): continue # if start less than i -> skip this note
+                        if ch.replace("make", "").split("-")[1]==str(i-1): break # if end == i -> end (хз почему -1, работает значит надо)
                     i = i + 1
                     if section!="":
                         params = section.split()
-                        if ch=='play': # string note for player
-                            str_note.append(params[0])
-                            length_note.append(params[1])
-                            instrument_note.append(params[2])
-                            amp_note.append(params[3])
                         if params[0]=="C0":
                             params[0] = 16.35
                         elif params[0]=="C#0":
@@ -456,93 +505,37 @@ while True:
                             if params[0]!="NN": # delay skip fix
                                 print("Note doesn't exist. Skip.")
                                 continue
-                        if ch=='make':
-                            if params[2]=="NN" or params[0]=="NN":
-                                write(file + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
-                            elif params[2]=="SWT":
-                                write(file + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
-                            elif params[2]=="SIN":
-                                write(file + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
-                            elif params[2]=="GTR":
-                                write(file + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
-                            elif params[2]=="NSE":
-                                write(file + ".wav", noise_gen(float(params[1]), float(params[3])))
-                            elif params[2]=="PSE":
-                                write(file + ".wav", pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
-                            else: # sample logic
-                                result = sample_gen(params[2])
-                                if result!=False:
-                                    write(file + ".wav", result)
-                            print("Line: " + str(i) + "/" + str(len(astsng)))
-                        elif ch=='play':
-                            if params[2]=="NN" or params[0]=="NN":
-                                data_note.append(sawtooth_gen(1.0, float(params[1]), 0))
-                            elif params[2]=="SWT":
-                                data_note.append(sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
-                            elif params[2]=="SIN":
-                                data_note.append(sin_gen(float(params[0]), float(params[1]), float(params[3])))
-                            elif params[2]=="GTR":
-                                data_note.append(guitar_gen(float(params[0]), float(params[1]), float(params[3])))
-                            elif params[2]=="NSE":
-                                data_note.append(noise_gen(float(params[1]), float(params[3])))
-                            elif params[2]=="PSE":
-                                data_note.append(pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
-                            else: # sample logic
-                                result = sample_gen(params[2])
-                                if result!=False:
-                                    data_note.append(result)
-                            print("Parsing line: " + str(i) + "/" + str(len(astsng)))
-                if ch=='play':
-                    p = pyaudio.PyAudio()
-                    stream = p.open(format=pyaudio.paInt16,
-                                    channels=2,
-                                    rate=44100,
-                                    output=True)
-                    i = -1
-                    while True:
-                        if i==len(str_note)-1:
-                            break
-                        i = i + 1
-                        clear()
-                        print(".AST Player [Current song: " + file + "]")
-                        print(" ")
-                        print("Note: " + str_note[i])
-                        print("Length: " + length_note[i])
-                        print("Instrument: " + instrument_note[i])
-                        print("Amplitude: " + amp_note[i])
-                        print(" ")
-                        print(" ")
-                        stream.write(data_note[i])
-                    stream.stop_stream()
-                    stream.close()
+                        if params[2]=="NN" or params[0]=="NN":
+                            write(file + ".wav", sawtooth_gen(1.0, float(params[1]), 0))
+                        elif params[2]=="SWT":
+                            write(file + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
+                        elif params[2]=="SIN":
+                            write(file + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
+                        elif params[2]=="GTR":
+                            write(file + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
+                        elif params[2]=="NSE":
+                            write(file + ".wav", noise_gen(float(params[1]), float(params[3])))
+                        elif params[2]=="PSE":
+                            write(file + ".wav", pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
+                        else: # sample logic
+                            result = sample_gen(params[2])
+                            if result!=False:
+                                write(file + ".wav", result)
+                        print("Line: " + str(i) + "/" + str(len(astsng)))
                 continue
-            if ch=="":
-                note = input("NOTE: ")
-                if note=="": continue
-                length = input("LENGTH: ")
-                if length=="": continue
-                if fastmodeActive==False:
-                    inst = input("INST: ")
-                    if length=="": continue
-                    amp = input("AMPLITUDE: ")
-                    if amp=="": amp = "1"
-                elif fastmodeActive==True:
-                    # last line parser
-                    fast_prev_lines = oldlines[-1].split(" ")
-                    inst = fast_prev_lines[2]
-                    amp = fast_prev_lines[3]
-                open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
-            elif ch=="m":
+            if ch=="m":
                 break
-            elif ch=="u":
+            if ch=="u":
                 open(file + ".ast", "w").write("!".join(oldlines[:-1]))
-            elif ch=="r":
+                continue
+            if ch=="r":
                 try:
                     oldlines.append(oldlines[-1])
                     open(file + ".ast", "w").write("!".join(oldlines))
                 except IndexError:
                     pass
-            elif ch=="delete-song":
+                continue
+            if ch=="delete-song":
                 clear()
                 print("Are you sure?")
                 life_ch = input("Y/N: ").lower()
@@ -551,7 +544,7 @@ while True:
                     break
                 else:
                     continue
-            elif ch=="fr": # fragment repeater
+            if ch=="fr": # fragment repeater
                 try:
                     start = int(input("Start line: "))
                     stop = int(input("Stop line: "))+1
@@ -560,13 +553,15 @@ while True:
                 for line in oldlines[start:stop]:
                     oldstuff = open(file + ".ast", "r").read()
                     open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + line)
-            elif ch=="fm": # fast mode switcher
+                continue
+            if ch=="fm": # fast mode switcher
                 if fastmodeActive:
                     fastmodeActive = False
                 else:
                     if oldlines!=[]: # bug fix
                         fastmodeActive = True
-            elif 'e' in ch:
+                continue
+            if 'e' in ch:
                 line = ch.replace('e', '').replace(' ', '')
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
@@ -581,10 +576,12 @@ while True:
                 open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
                 open(file + ".ast", "w").write('!'.join(oldlines))
-            elif 'd' in ch:
+                continue
+            if 'd' in ch:
                 line = ch.replace('d', '').replace(' ', '')
                 oldlines.pop(int(line))
                 open(file + ".ast", "w").write('!'.join(oldlines))
+                continue
     elif mn_ch=="2":
         clear()
         print(title)
@@ -802,31 +799,12 @@ while True:
         clear()
         print(title)
         print(" .WAV tools")
-        print(" 1) .WAV to one string converter")
-        print(" 2) Joiner")
-        print(" 3) Repeater")
+        print(" 1) Joiner")
+        print(" 2) Repeater")
         print(" ")
         tl = input(": ")
         clear()
         if tl=="1":
-            clear()
-            print(title)
-            print(" .WAV to one string converter")
-            print(" ")
-            filename = input(".WAV File (only name): ")
-            outputfile = input("Output File (*): ")
-            try:
-                data, fs = sf.read(filename + ".wav", dtype='float32')
-            except RuntimeError:
-                clear()
-                print(" File " + filename + ".wav doesn't exist!")
-                wait()
-                continue
-            st = open(outputfile, "wb")
-            a = b'exec("""import simpleaudio as sa\\nimport numpy as np\\nimport base64\\nobj = sa.play_buffer(np.frombuffer(base64.decodebytes(b"' + base64.b64encode(data) + b'"), dtype=np.float64), 2, 2, 44100)\nobj.wait_done()""")'
-            st.write(a)
-            st.close()
-        elif tl=="2":
             clear()
             print(title)
             print(" .WAV joiner")
@@ -838,7 +816,7 @@ while True:
                 if sound==False:
                     continue
                 write(output_file_name + ".wav", sound)
-        elif tl=="3":
+        elif tl=="2":
             clear()
             print(title)
             print(" .WAV Repeater")
@@ -902,12 +880,18 @@ while True:
         print("Help")
         print(" ")
         print("Default instruments:")
-        print(" Sawtooth wave - SWT")
-        print(" Sine wave - SIN")
-        print(" Noise - NSE")
-        print(" Pitched noise wave - PSE")
-        print(" Guitar - GTR")
-        print(" Delay - NN")
+        print(" 'SWT' - Sawtooth wave generator")
+        print(" 'SIN' - Sinusoid wave generator")
+        print(" 'NSE' - Noise generator")
+        print(" 'PSE' - Pitched noise generator")
+        print(" 'GTR' - Guitar sound generator")
+        print(" 'NN' - Silence generator")
+        print(" ")
+        print(".AST Editor view modes:")
+        print(" 'all' - display all lines")
+        print(" 'f' + number - display first (number) lines")
+        print(" 'l' + number - display last (number) lines")
+        print(" start + '-' + stop - display from-to lines ")
         print(" ")
         print("FAQ:")
         print(" Error: 'wave.Error: unknown format'")
