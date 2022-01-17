@@ -7,10 +7,10 @@ from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-title = "Ast-Tracker v1.3.7"
-api_git_link = "https://api.github.com/repos/martynovegor/ast-tracker/releases/latest"
-download_link = "https://github.com/martynovegor/ast-tracker/releases/latest/download/ast-tracker.exe"
-version = "v1.3.7"
+title = "Ast-Tracker v1.3.8"
+api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
+download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
+version = "v1.3.8"
 
 def clear():
     if os.name=='nt':
@@ -228,12 +228,37 @@ while True:
             print(" Fragment repeater - 'fr'")
             print(" View mode - 'v-' + mode")
             print(" Fast mode switcher (at least 1 line needed) - 'fm'")
+            print("     (ONLY FAST MODE): s - new line with silence")
+            print("     (ONLY FAST MODE): sr - silence line repeater")
             print(" Make .wav - 'make', 'make(start)-(end)'")
             print(" New note - '' ")
             if fastmodeActive==True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
+            if ch=="s": # fast mode silence
+                if fastmodeActive==True: # use only in fast mode
+                    fast_prev_lines = oldlines[-1].split(" ") # last line parser
+                    length = input("LENGTH: ")
+                    note = "NN" # silence
+                    inst = "NN" # silence
+                    amp = fast_prev_lines[3]
+                    open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp)
+                    continue
+                else:
+                    continue # avoiding unknown bugs
+            if ch=="sr": # fast mode silence repeater
+                if fastmodeActive==True: # use only in fast mode
+                    i = -1
+                    while True:
+                        fast_prev_lines = oldlines[i].split(" ")
+                        if fast_prev_lines[2]!="NN":
+                            i = i - 1
+                        else:
+                            break
+                    open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + fast_prev_lines[0] + " " + fast_prev_lines[1] + " " + fast_prev_lines[2] + " " + fast_prev_lines[3])
+                else:
+                    continue
             if "v-" in ch: # view mode changer
                 tvm = ch.replace("v-", "").upper()
                 if tvm=="ALL": # all view mode
@@ -264,7 +289,13 @@ while True:
                     if amp=="": amp = "1"
                 elif fastmodeActive==True:
                     # last line parser
-                    fast_prev_lines = oldlines[-1].split(" ")
+                    i = -1
+                    while True:
+                        fast_prev_lines = oldlines[i].split(" ")
+                        if fast_prev_lines[2]=="NN": # if silence
+                            i = i - 1
+                        else: # if instrument
+                            break
                     inst = fast_prev_lines[2]
                     amp = fast_prev_lines[3]
                 open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
@@ -904,8 +935,8 @@ while True:
         print("About")
         print("""
 Just a simple tracker
-Stay tuned for new releases! https://github.com/martynovegor/ast-tracker
-Copyright © 2022 martynovegor (MIT License)
+Stay tuned for new releases! https://github.com/mrtnvgr/ast-tracker
+Copyright © 2021-2022 mrtnvgr (MIT License)
         """)
         wait()
     else:
