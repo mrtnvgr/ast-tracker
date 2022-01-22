@@ -7,10 +7,10 @@ from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-title = "Ast-Tracker v1.3.8"
+title = "Ast-Tracker v1.3.9"
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
-version = "v1.3.8"
+version = "v1.3.9"
 
 def clear():
     if os.name=='nt':
@@ -18,11 +18,13 @@ def clear():
     else:
         os.system("clear")
 clear()
+
 def wait():
     if os.name=='nt':
         os.system("pause")
     else:
         os.system('read -n1 -r -p "Press any key to continue..."')
+
 def delete(file):
     if os.name=='nt':
         os.system("del /q /p " + file)
@@ -144,14 +146,19 @@ def readfile(filename, type):
             print("File " + filename + " doesn't exist")
             wait()
             return False
-    try:
-        data = open(filename, "r").read()
-        return data
-    except FileNotFoundError:
-        clear()
-        print(" File " + filename + " doesn't exist")
-        wait()
-        return False
+    elif type=="ast":
+        try:
+            data = open(filename, "r").read()
+            if "[ast v1]" in data: # if first ever ast format
+                data = data.replace("[ast v1]\n", "") # just removing header
+            return data # TODO: new ast format support
+        except FileNotFoundError:
+            return False
+
+def writefile(filedata, filename, type):
+    if type=="ast":
+        ttlfiledata = "[ast v1]\n" + filedata
+        open(filename, "w").write(ttlfiledata)
 
 while True:
     clear()
@@ -182,10 +189,7 @@ while True:
             clear()
             print(title)
             print(" .AST editor [Current song: " + file + "]")
-            try:
-                oldstuff = open(file + ".ast", "r").read()
-            except FileNotFoundError:
-                pass
+            oldstuff = readfile(file + ".ast", "ast")
             if view_mode=="ALL":
                 print("[VIEW MODE: " + view_mode + "]")
             elif "FT" in view_mode: #TODO: viewer
@@ -195,6 +199,8 @@ while True:
                 print("[VIEW MODE: " + view_mode + " " + str(view_mode_lines) + " LINES]")
             print(" ")
             print("[NOTE] [LENGTH] [INSTR] [AMP]")
+            if oldstuff==False:
+                oldstuff = "" # boolean split bug fix
             oldlines = oldstuff.split("!")
             if oldlines[0]=="":
                 oldlines.pop(0) # [0] empty string bug fix
@@ -243,7 +249,7 @@ while True:
                     note = "NN" # silence
                     inst = "NN" # silence
                     amp = fast_prev_lines[3]
-                    open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp)
+                    writefile(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp, file + ".ast", "ast")
                     continue
                 else:
                     continue # avoiding unknown bugs
@@ -256,7 +262,7 @@ while True:
                             i = i - 1
                         else:
                             break
-                    open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + fast_prev_lines[0] + " " + fast_prev_lines[1] + " " + fast_prev_lines[2] + " " + fast_prev_lines[3])
+                    writefile(oldstuff.replace("\n", "") + "!" + fast_prev_lines[0] + " " + fast_prev_lines[1] + " " + fast_prev_lines[2] + " " + fast_prev_lines[3], file + ".ast", "ast")
                 else:
                     continue
             if "v-" in ch: # view mode changer
@@ -298,7 +304,7 @@ while True:
                             break
                     inst = fast_prev_lines[2]
                     amp = fast_prev_lines[3]
-                open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
+                writefile(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp, file + ".ast", "ast")
                 continue
             if "make" in ch or ch=="make":
                 prev_data = ""
@@ -557,12 +563,12 @@ while True:
             if ch=="m":
                 break
             if ch=="u":
-                open(file + ".ast", "w").write("!".join(oldlines[:-1]))
+                writefile("!".join(oldlines[:-1]), file + ".ast", "ast")
                 continue
             if ch=="r":
                 try:
                     oldlines.append(oldlines[-1])
-                    open(file + ".ast", "w").write("!".join(oldlines))
+                    writefile("!".join(oldlines), file + ".ast", "ast")
                 except IndexError:
                     pass
                 continue
@@ -582,8 +588,8 @@ while True:
                 except ValueError:
                     continue
                 for line in oldlines[start:stop]:
-                    oldstuff = open(file + ".ast", "r").read()
-                    open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + line)
+                    oldstuff = readfile(file + ".ast", "ast")
+                    writefile(oldstuff.replace("\n", "") + "!" + line, file + ".ast", "ast")
                 continue
             if ch=="fm": # fast mode switcher
                 if fastmodeActive:
@@ -604,14 +610,13 @@ while True:
                     fast_prev_lines = oldlines[-1].split(" ")
                     inst = fast_prev_lines[2]
                     amp = fast_prev_lines[3]
-                open(file + ".ast", "w").write(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp) # new line bug fix
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
-                open(file + ".ast", "w").write('!'.join(oldlines))
+                writefile('!'.join(oldlines), file + ".ast", "ast")
                 continue
             if 'd' in ch:
                 line = ch.replace('d', '').replace(' ', '')
                 oldlines.pop(int(line))
-                open(file + ".ast", "w").write('!'.join(oldlines))
+                writefile('!'.join(oldlines), file + ".ast", "ast")
                 continue
     elif mn_ch=="2":
         clear()
@@ -641,12 +646,10 @@ while True:
             data = readfile(filename + ".ast", "ast")
             if data==False:
                 continue
-            f = open(filename + ".ast", "w")
             for i in data.split("!"):
                 if i!='':
                     temp = i.split(" ")
-                    f.write("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3])
-            f.close()
+                    writefile("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3], filename + ".ast", "ast")
         elif tl=="5":
             print(title)
             print(" .AST joiner")
@@ -659,7 +662,7 @@ while True:
                 if data==False:
                     continue
                 total_file_data = total_file_data + data.replace("\n", "")
-            open(resultfile + ".ast", "w").write(total_file_data)
+            writefile(total_file_data, resultfile + ".ast", "ast")
         elif tl=="4":
             print(title)
             print(" .AST instrument changer")
@@ -699,7 +702,7 @@ while True:
                             else:
                                 dat[2] = ninst
                     data[i] = ' '.join(dat)
-            open(filename + ".ast", "w").write('!'.join(data))
+            writefile('!'.join(data), filename + ".ast", "ast")
         elif tl=="2":
             clear()
             print(title)
@@ -782,7 +785,7 @@ while True:
                                 print("Invalid note!")
                     dat[0] = instrument
                     ndata.append(' '.join(dat))
-            open(filename + ".ast", "w").write('!'.join(ndata))
+            writefile('!'.join(ndata), filename + ".ast", "ast")
         elif tl=="6":
             clear()
             print(title)
@@ -801,7 +804,7 @@ while True:
             data = data.replace("\n", "")
             if data[1]!="!": # '1' bug fix
                 data = data + "!"
-            open(filename + ".ast", "w").write(data * count)
+            writefile(data * count, filename + ".ast", "ast")
         elif tl=="3":
             clear()
             print(title)
@@ -823,7 +826,7 @@ while True:
                     dat = dat.split(" ")
                     dat[3] = pc
                     ndata.append(' '.join(dat))
-            open(filename + ".ast", "w").write('!'.join(ndata))
+            writefile('!'.join(ndata), filename + ".ast", "ast")
         else:
             continue
     elif mn_ch=="3":
