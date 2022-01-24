@@ -7,10 +7,10 @@ from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-title = "Ast-Tracker v1.3.9"
+version = "v1.4.0"
+title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
-version = "v1.3.9"
 
 def clear():
     if os.name=='nt':
@@ -149,15 +149,25 @@ def readfile(filename, type):
     elif type=="ast":
         try:
             data = open(filename, "r").read()
-            if "[ast v1]" in data: # if first ever ast format
+            if "[ast v1]" in data: # if first ast format
                 data = data.replace("[ast v1]\n", "") # just removing header
-            return data # TODO: new ast format support
+                return [data, "v1"]
+            elif "[ast v1.1]" in data: # if 1.1 ast format
+                data = data.replace("[ast v1.1]\n", "") # removing header
+                c_name = data.split("[name: ")[1].split("]")[0] # getting name
+                c_desc = data.split("[description: ")[1].split("]")[0] # getting description
+                c_artist = data.split("[artist: ")[1].split("]")[0] # getting artist
+                data = data.replace("[name: " + c_name + "]\n[description: " + c_desc + "]\n[artist: " + c_artist + "]\n", "") # getting raw data
+                return [data, "v1.1", c_name, c_desc, c_artist]
+            else: # v0 format (only song data)
+                return [data, "v0"]
         except FileNotFoundError:
             return False
 
 def writefile(filedata, filename, type):
     if type=="ast":
-        ttlfiledata = "[ast v1]\n" + filedata
+        #ttlfiledata = "[ast v1]\n" + filedata (v1 parser)
+        ttlfiledata = "[ast v1.1]\n" + "[name: " + c_name + "]\n[description: " + c_desc + "]\n" + "[artist: " + c_artist + "]\n" + filedata # v1.1 parser
         open(filename, "w").write(ttlfiledata)
 
 while True:
@@ -168,9 +178,10 @@ while True:
     print(" 2) .AST tools")
     print(" 3) .WAV tools")
     print(" ")
-    print(" 4) Settings")
-    print(" 5) Help")
-    print(" 0) About")
+    print(" s) Settings")
+    print(" h) Help")
+    print(" a) About")
+    print(" u) Update")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
@@ -186,21 +197,35 @@ while True:
         view_mode = "ALL"
         view_mode_lines = 0
         while True:
+            rawfiledata = readfile(file + ".ast", "ast")
+            if rawfiledata==False:
+                clear()
+                c_name = input("Song name: ")
+                c_artist = input("Song artist: ")
+                c_desc = input("Song description: ")
+                rawfiledata = ["", "v1.1", c_name, c_desc, c_artist]
             clear()
             print(title)
-            print(" .AST editor [Current song: " + file + "]")
-            oldstuff = readfile(file + ".ast", "ast")
+            print(" .AST editor ", end="")
             if view_mode=="ALL":
                 print("[VIEW MODE: " + view_mode + "]")
-            elif "FT" in view_mode: #TODO: viewer
+            elif "FT" in view_mode:
                 lines_list = view_mode.replace("FT", "").split("-")
                 print("[VIEW MODE: FROM " + lines_list[0] + " TO " + lines_list[1] + " LINE")
             else:
                 print("[VIEW MODE: " + view_mode + " " + str(view_mode_lines) + " LINES]")
+            if rawfiledata[1]=="v0" or rawfiledata=="v1":
+                print(" Song: [AST version: " + rawfiledata[1])
+                print("        File: " + file + ".ast]")
+            elif rawfiledata[1]=="v1.1":
+                print(" Song: [AST version: " + rawfiledata[1])
+                print("        Name: " + rawfiledata[2])
+                print("        Artist: " + rawfiledata[4])
+                print("        Description: " + rawfiledata[3] + "]")
+            print(" ")
+            oldstuff = rawfiledata[0]
             print(" ")
             print("[NOTE] [LENGTH] [INSTR] [AMP]")
-            if oldstuff==False:
-                oldstuff = "" # boolean split bug fix
             oldlines = oldstuff.split("!")
             if oldlines[0]=="":
                 oldlines.pop(0) # [0] empty string bug fix
@@ -588,7 +613,7 @@ while True:
                 except ValueError:
                     continue
                 for line in oldlines[start:stop]:
-                    oldstuff = readfile(file + ".ast", "ast")
+                    oldstuff = readfile(file + ".ast", "ast")[0]
                     writefile(oldstuff.replace("\n", "") + "!" + line, file + ".ast", "ast")
                 continue
             if ch=="fm": # fast mode switcher
@@ -628,6 +653,7 @@ while True:
         print(" 4) Instrument changer")
         print(" 5) Joiner")
         print(" 6) Repeater")
+        print(" 7) Version updater")
         print(" ")
         tl = input(": ")
         clear()
@@ -643,7 +669,7 @@ while True:
                 print("Couldn't convert '" + speed + "' to float.")
                 wait()
                 continue
-            data = readfile(filename + ".ast", "ast")
+            data = readfile(filename + ".ast", "ast")[0]
             if data==False:
                 continue
             for i in data.split("!"):
@@ -658,7 +684,7 @@ while True:
             resultfile = input("Result file (only name): ")
             total_file_data = ""
             for filename in filelist:
-                data = readfile(filename + ".ast", "ast")
+                data = readfile(filename + ".ast", "ast")[0]
                 if data==False:
                     continue
                 total_file_data = total_file_data + data.replace("\n", "")
@@ -682,7 +708,7 @@ while True:
             elif ch=="3":
                 oinst = input("Instrument (old): ")
                 ninst = input("Instruments list (new): ").split(" ")
-            data = readfile(filename + ".ast", "ast")
+            data = readfile(filename + ".ast", "ast")[0]
             if data==False:
                 continue
             data = data.split("!")
@@ -709,7 +735,7 @@ while True:
             print(" .AST pitch changer")
             print(" ")
             filename = input("File (only name): ")
-            data = readfile(filename + ".ast", "ast")
+            data = readfile(filename + ".ast", "ast")[0]
             if data==False:
                 continue
             pc = input("Pitch (half-octaves): ")
@@ -792,7 +818,7 @@ while True:
             print(" .AST repeater")
             print(" ")
             filename = input("File (only name): ")
-            data = readfile(filename + ".ast", "ast")
+            data = readfile(filename + ".ast", "ast")[0]
             if data==False:
                 continue
             try:
@@ -811,7 +837,7 @@ while True:
             print(" .AST amplitude changer")
             print(" ")
             filename = input("File (only name): ")
-            data = readfile(filename + ".ast", "ast")
+            data = readfile(filename + ".ast", "ast")[0]
             if data==False:
                 continue
             pc = input("Amplitude: ")
@@ -827,6 +853,28 @@ while True:
                     dat[3] = pc
                     ndata.append(' '.join(dat))
             writefile('!'.join(ndata), filename + ".ast", "ast")
+        elif tl=="7": # .ast version updater
+            clear()
+            print(title)
+            print(" .AST version updater")
+            print(" ")
+            filename = input("File (only name): ")
+            data = readfile(filename + ".ast", "ast")
+            if data==False:
+                continue
+            clear()
+            if data[1]=="v1.1": # lastest ast version
+                print("Current version is latest: v1.1")
+            else: # old version
+                print("Old version: " + data[1])
+                print("New version: v1.1")
+                print()
+                c_name = input("New name: ")
+                c_artist = input("New artist: ")
+                c_desc = input("New description: ")
+                # data = "[ast v1]\n" + data (updating for v1 version)
+                writefile(data[0], filename + ".ast", "ast") # update logic in func
+            continue
         else:
             continue
     elif mn_ch=="3":
@@ -872,43 +920,24 @@ while True:
                 write(filename + ".wav", sound)
         else:
             continue
-    elif mn_ch=="4": # settings
+    elif mn_ch=="s": # settings
         clear()
         print(title)
         print(" Settings")
         print(" Pick:")
         print(" [1] Sample pack: " + settings['sample_folder'])
         print(" ")
-        print(" [0] Check for new updates")
         print(" [m] Main menu")
         print(" ")
         ch = input(": ")
         if ch=="1":
             settings['sample_folder'] = input("New value: ")
-        elif ch=="0":
-            git_version = requests.get(api_git_link).json()["name"]
-            if version!=git_version:
-                clear()
-                print(title)
-                print("New update! Version:" + git_version)
-                u_ch = input("Download update? (y/n): ").lower()
-                if u_ch=="y":
-                    urllib.request.urlretrieve(download_link, "ast-tracker-" + git_version + ".exe")
-                else:
-                    continue
-            else:
-                clear()
-                print(title)
-                print(" ")
-                print("You are using latest release!")
-                print(" ")
-                wait()
         elif ch=="m":
             continue
         else:
             continue
         settings_func("s")
-    elif mn_ch=="5":
+    elif mn_ch=="h":
         clear()
         print(title)
         print("Help")
@@ -932,7 +961,7 @@ while True:
         print(" Solution: use only 16 bit wav files")
         print(" ")
         wait()
-    elif mn_ch=="0":
+    elif mn_ch=="a":
         clear()
         print(title)
         print("About")
@@ -942,5 +971,23 @@ Stay tuned for new releases! https://github.com/mrtnvgr/ast-tracker
 Copyright © 2021-2022 mrtnvgr (MIT License)
         """)
         wait()
+    elif mn_ch=="u":
+        git_version = requests.get(api_git_link).json()["name"]
+        if version!=git_version:
+            clear()
+            print(title)
+            print("New update! Version:" + git_version)
+            u_ch = input("Download update? (y/n): ").lower()
+            if u_ch=="y":
+                urllib.request.urlretrieve(download_link, "ast-tracker-" + git_version + ".exe")
+            else:
+                continue
+        else:
+            clear()
+            print(title)
+            print(" ")
+            print("You are using latest release!")
+            print(" ")
+            wait()
     else:
         continue
