@@ -7,7 +7,7 @@ from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-version = "v1.4.0"
+version = "v1.4.1"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
@@ -218,14 +218,18 @@ while True:
                 print(" Song: [AST version: " + rawfiledata[1])
                 print("        File: " + file + ".ast]")
             elif rawfiledata[1]=="v1.1":
+                c_name = rawfiledata[2]
+                c_artist = rawfiledata[4]
+                c_desc = rawfiledata[3]
                 print(" Song: [AST version: " + rawfiledata[1])
-                print("        Name: " + rawfiledata[2])
-                print("        Artist: " + rawfiledata[4])
-                print("        Description: " + rawfiledata[3] + "]")
+                print("        Name: " + c_name)
+                print("        Artist: " + c_artist)
+                print("        Description: " + c_desc + "]")
+                print(" Change song data - 'sd'")
             print(" ")
             oldstuff = rawfiledata[0]
             print(" ")
-            print("[NOTE] [LENGTH] [INSTR] [AMP]")
+            print("[№] [NOTE] [LENGTH] [INST] [AMP]")
             oldlines = oldstuff.split("!")
             if oldlines[0]=="":
                 oldlines.pop(0) # [0] empty string bug fix
@@ -267,6 +271,23 @@ while True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
+            if rawfiledata[1]=="v1.1" and ch=="sd":
+                while True:
+                    clear()
+                    print(" Song: [Name[n]: " + c_name)
+                    print("        Artist[a]: " + c_artist)
+                    print("        Description[d]: " + c_desc + "]")
+                    print()
+                    tmp_ch = input(": ")
+                    if tmp_ch=="n":
+                        c_name = input("Name: ")
+                    elif tmp_ch=="a":
+                        c_artist = input("Artist: ")
+                    elif tmp_ch=="d":
+                        c_desc = input("Description: ")
+                    else:
+                        break
+                writefile(oldstuff, file + ".ast", "ast")
             if ch=="s": # fast mode silence
                 if fastmodeActive==True: # use only in fast mode
                     fast_prev_lines = oldlines[-1].split(" ") # last line parser
@@ -638,7 +659,7 @@ while True:
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
                 writefile('!'.join(oldlines), file + ".ast", "ast")
                 continue
-            if 'd' in ch:
+            if 'd' in ch and ch!="sd":
                 line = ch.replace('d', '').replace(' ', '')
                 oldlines.pop(int(line))
                 writefile('!'.join(oldlines), file + ".ast", "ast")
@@ -976,6 +997,7 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
         if version!=git_version:
             clear()
             print(title)
+            print()
             print("New update! Version:" + git_version)
             u_ch = input("Download update? (y/n): ").lower()
             if u_ch=="y":
