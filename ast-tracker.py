@@ -1,16 +1,33 @@
 print("Starting...")
 
-import wave, os, random, time, requests, urllib, json
+import wave, os, random, time, requests, urllib, json, progressbar
 from numpy import linspace, arange, pi, sin, zeros, int16
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-version = "v1.4.1"
+version = "v1.4.1-1"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
-download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
+exe_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
+src_download_link = "https://raw.githubusercontent.com/mrtnvgr/ast-tracker/main/ast-tracker.py"
+
+
+pbar = None
+def show_progress(block_num, block_size, total_size):
+    global pbar
+    if pbar is None:
+        pbar = progressbar.ProgressBar(maxval=total_size)
+        pbar.start()
+
+    downloaded = block_num * block_size
+    if downloaded < total_size:
+        pbar.update(downloaded)
+    else:
+        pbar.finish()
+        pbar = None
+
 
 def clear():
     if os.name=='nt':
@@ -1000,8 +1017,12 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
             print()
             print("New update! Version:" + git_version)
             u_ch = input("Download update? (y/n): ").lower()
+            w_ch = input("Source code or .exe (src/exe): ").lower()
             if u_ch=="y":
-                urllib.request.urlretrieve(download_link, "ast-tracker-" + git_version + ".exe")
+                if w_ch=="exe":
+                    urllib.request.urlretrieve(exe_download_link, "ast-tracker-" + git_version + ".exe", show_progress)
+                elif w_ch=="src":
+                    urllib.request.urlretrieve(src_download_link, "ast-tracker-" + git_version + ".py", show_progress)
             else:
                 continue
         else:
