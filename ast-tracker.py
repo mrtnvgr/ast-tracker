@@ -1,33 +1,34 @@
 print("Starting...")
 
-import wave, os, random, time, requests, urllib, json, progressbar
+import wave, os, random, time, requests, sys, json
 from numpy import linspace, arange, pi, sin, zeros, int16
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-version = "v1.4.1-1"
+version = "v1.4.2"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 exe_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
 src_download_link = "https://raw.githubusercontent.com/mrtnvgr/ast-tracker/main/ast-tracker.py"
 
-
-pbar = None
-def show_progress(block_num, block_size, total_size):
-    global pbar
-    if pbar is None:
-        pbar = progressbar.ProgressBar(maxval=total_size)
-        pbar.start()
-
-    downloaded = block_num * block_size
-    if downloaded < total_size:
-        pbar.update(downloaded)
-    else:
-        pbar.finish()
-        pbar = None
-
+def download(url, filename):
+    with open(filename, 'wb') as f:
+        response = requests.get(url, stream=True)
+        total = response.headers.get('content-length')
+        if total is None:
+            f.write(response.content)
+        else:
+            downloaded = 0
+            total = int(total)
+            for data in response.iter_content(chunk_size=max(int(total/1000), 1024*1024)):
+                downloaded += len(data)
+                f.write(data)
+                done = int(50*downloaded/total)
+                sys.stdout.write('\r[{}{}]'.format('█' * done, '.' * (50-done)))
+                sys.stdout.flush()
+    sys.stdout.write('\n')
 
 def clear():
     if os.name=='nt':
@@ -278,11 +279,12 @@ while True:
             print(" Delete specific line - 'd' + number")
             print(" Delete song - 'delete-song'")
             print(" Fragment repeater - 'fr'")
-            print(" View mode - 'v-' + mode")
+            print(" View mode - 'v-' + mode (all, f(n), l(n))")
             print(" Fast mode switcher (at least 1 line needed) - 'fm'")
             print("     (ONLY FAST MODE): s - new line with silence")
             print("     (ONLY FAST MODE): sr - silence line repeater")
             print(" Make .wav - 'make', 'make(start)-(end)'")
+            print(" New note at specific position - 'sp'")
             print(" New note - '' ")
             if fastmodeActive==True:
                 ch = input("[FAST MODE]: ")
@@ -346,7 +348,12 @@ while True:
                         continue
                 elif "-" in tvm: # from-to view mode
                     view_mode = "FT" + tvm.split("-")[0] + "-" + tvm.split("-")[1]
-            if ch=="": # empty string
+            if ch=="" or "sp" in ch: # adding lines
+                if "sp" in ch:
+                    try:
+                        place = int(input("Place: "))
+                    except ValueError:
+                        continue
                 note = input("NOTE: ")
                 if note=="": continue
                 length = input("LENGTH: ")
@@ -356,7 +363,7 @@ while True:
                     if length=="": continue
                     amp = input("AMPLITUDE: ")
                     if amp=="": amp = "1"
-                elif fastmodeActive==True:
+                elif fastmodeActive==True and oldlines!=[]:
                     # last line parser
                     i = -1
                     while True:
@@ -367,7 +374,12 @@ while True:
                             break
                     inst = fast_prev_lines[2]
                     amp = fast_prev_lines[3]
-                writefile(oldstuff.replace("\n", "") + "!" + note + " " + length + " " + inst + " " + amp, file + ".ast", "ast")
+                newstuff = oldstuff.replace("\n", "").split("!")
+                if "sp" in ch:
+                    newstuff.insert(place, note + " " + length + " " + inst + " " + amp)
+                else:
+                    newstuff.append(note + " " + length + " " + inst + " " + amp)
+                writefile("!".join(newstuff), file + ".ast", "ast")
                 continue
             if "make" in ch or ch=="make":
                 prev_data = ""
@@ -658,10 +670,10 @@ while True:
                 if fastmodeActive:
                     fastmodeActive = False
                 else:
-                    if oldlines!=[]: # bug fix
+                    if oldlines!=[]:
                         fastmodeActive = True
                 continue
-            if 'e' in ch:
+            if 'e' in ch and ch!="e":
                 line = ch.replace('e', '').replace(' ', '')
                 note = input("NOTE: ")
                 length = input("LENGTH: ")
@@ -1020,9 +1032,9 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
             w_ch = input("Source code or .exe (src/exe): ").lower()
             if u_ch=="y":
                 if w_ch=="exe":
-                    urllib.request.urlretrieve(exe_download_link, "ast-tracker-" + git_version + ".exe", show_progress)
+                    download(exe_download_link, "ast-tracker-" + git_version + ".exe")
                 elif w_ch=="src":
-                    urllib.request.urlretrieve(src_download_link, "ast-tracker-" + git_version + ".py", show_progress)
+                    download(src_download_link, "ast-tracker-" + git_version + ".py")
             else:
                 continue
         else:
