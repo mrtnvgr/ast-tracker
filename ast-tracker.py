@@ -7,7 +7,7 @@ from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-version = "v1.4.2"
+version = "v1.4.2-1"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 exe_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
@@ -200,6 +200,7 @@ while True:
     print(" h) Help")
     print(" a) About")
     print(" u) Update")
+    print(" e) Exit")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
@@ -1044,5 +1045,7 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
             print("You are using latest release!")
             print(" ")
             wait()
+    elif mn_ch=="e":
+        sys.exit(0) # exit from main menu
     else:
         continue
