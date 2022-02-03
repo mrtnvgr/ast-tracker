@@ -7,7 +7,7 @@ from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-version = "v1.4.2-1"
+version = "v1.4.2-2"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 exe_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
