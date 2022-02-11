@@ -1,13 +1,13 @@
 print("Starting...")
 
+from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin
 import wave, os, random, time, requests, sys, json
-from numpy import linspace, arange, pi, sin, zeros, int16
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 
-version = "v1.4.2-3"
+version = "v1.4.3"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 exe_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker.exe"
@@ -74,32 +74,16 @@ def settings_func(mode):
         json.dump(settings, open("settings.json", "w"), indent=4)
 settings_func("r")
 
-# sawtooth_gen(990.0, 5.0, 1)
-def sawtooth_gen(f_c, duration_s, amp):
-    t_samples = arange(44100 * duration_s) / 44100
-    waveform = f_c * t_samples
-    waveform_quiet = waveform * amp
-    waveform_ints = int16(waveform_quiet * 32768)
-    return(waveform_ints)
+def sawtooth_gen(f_c, duration_s, amp): return int16(amp * arctan(tan(2.0 * pi * f_c * arange(44100 * duration_s)/44100))*32768)
 
+def sin_gen(f_c, duration_s, amp): return int16(amp * sin(2.0 * pi * f_c * arange(44100 * duration_s)/44100)*32768)
 
-# sin_gen(990.0, 5.0, 1)
-def sin_gen(f_c, duration_s, amp):
-    t_samples = arange(44100 * duration_s) / 44100
-    waveform = sin(2 * pi * f_c * t_samples)
-    waveform_quiet = waveform * amp
-    waveform_ints = int16(waveform_quiet * 32768)
-    return(waveform_ints)
+def triangle_gen(f_c, duration_s, amp): return int16(amp * arcsin(sin(2.0 * pi * f_c * arange(44100 * duration_s)/44100))*32768)
 
-# White noise
-# noise_gen(5.0, 1.0)
 def noise_gen(duration_s, amp):
     pure = linspace(0, 1, int(duration_s * 44100))
     noise = nprandom.normal(0, 1, pure.shape)
-    signal = pure + noise
-    waveform_quiet = signal * amp
-    waveform_ints = int16(waveform_quiet * 32768)
-    return(waveform_ints)
+    return int16((pure + noise)*amp * 32768)
 
 # guitar_gen(990.0, 5.0, 1)
 def guitar_gen(f_c, duration_s, amp):
@@ -161,8 +145,6 @@ def readfile(filename, type):
             obj.close()
             return sound
         except FileNotFoundError:
-            print("File " + filename + " doesn't exist")
-            wait()
             return False
     elif type=="ast":
         try:
@@ -187,6 +169,14 @@ def writefile(filedata, filename, type):
         #ttlfiledata = "[ast v1]\n" + filedata (v1 parser)
         ttlfiledata = "[ast v1.1]\n" + "[name: " + c_name + "]\n[description: " + c_desc + "]\n" + "[artist: " + c_artist + "]\n" + filedata # v1.1 parser
         open(filename, "w").write(ttlfiledata)
+
+def fetchsngdata(filename):
+    global c_name,c_desc,c_artist
+    data = readfile(filename, "ast")
+    if data[1]=="v1.1":
+        c_name = data[2]
+        c_desc = data[3]
+        c_artist = data[4]
 
 while True:
     clear()
@@ -274,6 +264,7 @@ while True:
                     print("[" + str(n) + "] " + i)
             print(" ")
             print(" Go to menu - 'm' ")
+            print(" Exit - 'exit'")
             print(" Delete last line - 'u' ")
             print(" Repeat last line - 'r' ")
             print(" Edit specific line - 'e' + number")
@@ -291,6 +282,8 @@ while True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
+            if ch=="exit":
+                sys.exit(0)
             if rawfiledata[1]=="v1.1" and ch=="sd":
                 while True:
                     clear()
@@ -624,6 +617,8 @@ while True:
                             write(file + ".wav", sawtooth_gen(float(params[0]), float(params[1]), float(params[3])))
                         elif params[2]=="SIN":
                             write(file + ".wav", sin_gen(float(params[0]), float(params[1]), float(params[3])))
+                        elif params[2]=="TRE":
+                            write(file + ".wav", triangle_gen(float(params[0]), float(params[1]), float(params[3])))
                         elif params[2]=="GTR":
                             write(file + ".wav", guitar_gen(float(params[0]), float(params[1]), float(params[3])))
                         elif params[2]=="NSE":
@@ -698,6 +693,7 @@ while True:
         clear()
         print(title)
         print(" .AST tools")
+        print()
         print(" 1) Speed changer")
         print(" 2) Pitch changer")
         print(" 3) Amplitude changer")
@@ -720,13 +716,14 @@ while True:
                 print("Couldn't convert '" + speed + "' to float.")
                 wait()
                 continue
-            data = readfile(filename + ".ast", "ast")[0]
+            data = readfile(filename + ".ast", "ast")
             if data==False:
                 continue
-            for i in data.split("!"):
+            for i in data[0].split("!"):
                 if i!='':
                     temp = i.split(" ")
-                    writefile("!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3], filename + ".ast", "ast")
+                    fetchsngdata(filename + ".ast")
+                    writefile(data[0] + "!" + temp[0] + " " + str(float(temp[1]) / speed) + " " + temp[2] + " " + temp[3], filename + ".ast", "ast")
         elif tl=="5":
             print(title)
             print(" .AST joiner")
@@ -735,10 +732,13 @@ while True:
             resultfile = input("Result file (only name): ")
             total_file_data = ""
             for filename in filelist:
-                data = readfile(filename + ".ast", "ast")[0]
+                data = readfile(filename + ".ast", "ast")
                 if data==False:
-                    continue
-                total_file_data = total_file_data + data.replace("\n", "")
+                    break
+                total_file_data = total_file_data + "!" + data[0].replace("\n", "")
+            if total_file_data=="":
+                continue
+            fetchsngdata(filename + ".ast")
             writefile(total_file_data, resultfile + ".ast", "ast")
         elif tl=="4":
             print(title)
@@ -779,6 +779,7 @@ while True:
                             else:
                                 dat[2] = ninst
                     data[i] = ' '.join(dat)
+            fetchsngdata(filename + ".ast")
             writefile('!'.join(data), filename + ".ast", "ast")
         elif tl=="2":
             clear()
@@ -857,11 +858,12 @@ while True:
                                 instrument = "C" + instrument.replace("C#", "")
                             elif instrument[0]=="C" and instrument[1]!="#":
                                 if instrument[-1]!="0": # minimal octave
-                                    instrument = "B" + str(int(instrument[-1]) + 1) # octave down
+                                    instrument = "B" + str(int(instrument[-1]) - 1) # octave down
                             else:
                                 print("Invalid note!")
                     dat[0] = instrument
                     ndata.append(' '.join(dat))
+            fetchsngdata(filename + ".ast")
             writefile('!'.join(ndata), filename + ".ast", "ast")
         elif tl=="6":
             clear()
@@ -869,7 +871,7 @@ while True:
             print(" .AST repeater")
             print(" ")
             filename = input("File (only name): ")
-            data = readfile(filename + ".ast", "ast")[0]
+            data = readfile(filename + ".ast", "ast")
             if data==False:
                 continue
             try:
@@ -878,21 +880,22 @@ while True:
                 print("Invalid integer!")
                 wait()
                 continue
-            data = data.replace("\n", "")
+            data = data[0].replace("\n", "")
             if data[1]!="!": # '1' bug fix
                 data = data + "!"
-            writefile(data * count, filename + ".ast", "ast")
+            fetchsngdata(filename + ".ast")
+            writefile((data * count)[:-1], filename + ".ast", "ast")
         elif tl=="3":
             clear()
             print(title)
             print(" .AST amplitude changer")
             print(" ")
             filename = input("File (only name): ")
-            data = readfile(filename + ".ast", "ast")[0]
+            data = readfile(filename + ".ast", "ast")
             if data==False:
                 continue
             pc = input("Amplitude: ")
-            data = data.split("!")
+            data = data[0].split("!")
             if data=="":
                 continue
             i = -1
@@ -903,6 +906,7 @@ while True:
                     dat = dat.split(" ")
                     dat[3] = pc
                     ndata.append(' '.join(dat))
+            fetchsngdata(filename + ".ast")
             writefile('!'.join(ndata), filename + ".ast", "ast")
         elif tl=="7": # .ast version updater
             clear()
@@ -924,6 +928,7 @@ while True:
                 c_artist = input("New artist: ")
                 c_desc = input("New description: ")
                 # data = "[ast v1]\n" + data (updating for v1 version)
+                fetchsngdata(filename + ".ast")
                 writefile(data[0], filename + ".ast", "ast") # update logic in func
             continue
         else:
@@ -932,6 +937,7 @@ while True:
         clear()
         print(title)
         print(" .WAV tools")
+        print()
         print(" 1) Joiner")
         print(" 2) Repeater")
         print(" ")
@@ -975,10 +981,9 @@ while True:
         clear()
         print(title)
         print(" Settings")
+        print()
         print(" Pick:")
         print(" [1] Sample pack: " + settings['sample_folder'])
-        print(" ")
-        print(" [m] Main menu")
         print(" ")
         ch = input(": ")
         if ch=="1":
@@ -996,6 +1001,7 @@ while True:
         print("Default instruments:")
         print(" 'SWT' - Sawtooth wave generator")
         print(" 'SIN' - Sinusoid wave generator")
+        print(" 'TRE' - Triangle wave generator")
         print(" 'NSE' - Noise generator")
         print(" 'PSE' - Pitched noise generator")
         print(" 'GTR' - Guitar sound generator")
@@ -1027,10 +1033,10 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
             clear()
             print(title)
             print()
-            print("New update! Version:" + git_version)
+            print("New update " + git_version + "!")
             u_ch = input("Download update? (y/n): ").lower()
-            w_ch = input("Source code or .exe (src/exe): ").lower()
             if u_ch=="y":
+                w_ch = input("Source code or .exe (src/exe): ").lower()
                 if w_ch=="exe":
                     download(exe_download_link, "ast-tracker-" + git_version + ".exe")
                 elif w_ch=="src":
