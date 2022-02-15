@@ -1,6 +1,6 @@
 print("Starting...")
 
-from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin, hanning, fft, angle, exp
+from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin
 import wave, os, random, time, requests, sys, json
 from numpy import random as nprandom
 from numpy import abs as npabs
@@ -8,11 +8,10 @@ from numpy import max as npmax
 from numpy import min as npmin
 from numpy import round as npround
 
-version = "v1.4.3-1"
+version = "v1.4.3-2"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 bin_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker"
-src_download_link = "https://raw.githubusercontent.com/mrtnvgr/ast-tracker/main/ast-tracker.py"
 
 def download(url, filename):
     with open(filename, 'wb') as f:
@@ -109,38 +108,12 @@ def pitched_nse_gen(f_c, duration_s, amp):
     waveform_quiet = samples * amp
     return int16(waveform_quiet * 32768) # NOTE: pitched noise function (maybe temporary)
 
-def speedx(snd_array, factor):
-    indices = npround( arange(0, len(sound_array), factor) )
-    indices = indices[indices < len(sound_array)].astype(int)
-    return sound_array[ indices.astype(int) ]
-
-def stretch(sound_array, f, window_size, h):
-    phase = zeros(window_size)
-    hanning_window = hanning(window_size)
-    result = zeros( len(sound_array) /f + window_size)
-    for i in arange(0, len(sound_array)-(window_size+h), h*f):
-        a1 = sound_array[i: i + window_size]
-        a2 = sound_array[i + h: i + window_size + h]
-        s1 =  fft.fft(hanning_window * a1)
-        s2 =  fft.fft(hanning_window * a2)
-        phase = (phase + angle(s2/s1)) % 2*pi
-        a2_rephased = fft.ifft(npabs(s2)*exp(1j*phase))
-        i2 = int(i/f)
-        result[i2 : i2 + window_size] += hanning_window*a2_rephased
-    result = ((2**(16-4)) * result/result.max())
-    return result.astype('int16')
-
-def pitchshift(snd_array, n, window_size=2**13, h=2**11):
-    factor = 2**(1.0 * n / 12.0)
-    stretched = stretch(snd_array, 1.0/factor, window_size, h)
-    return speedx(stretched[window_size:], factor)
-
-def sample_gen(sample_name, tones):
+def sample_gen(sample_name, length):
     try:
         obj = wave.open(settings['sample_folder'] + "/" + sample_name + ".wav", 'r')
         sample_data = obj.readframes(obj.getnframes())
         obj.close()
-        return pitchshift(sample_data, tones)
+        return sample_data[:round(44100*length)]
     except FileNotFoundError:
         print("Sample doesn't exist")
         wait()
@@ -650,7 +623,7 @@ while True:
                         elif params[2]=="PSE":
                             write(file + ".wav", pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
                         else: # sample logic
-                            result = sample_gen(params[2], int(params[0]))
+                            result = sample_gen(params[2], float(params[1]))
                             if result!=False:
                                 write(file + ".wav", result)
                         print("Line: " + str(i) + "/" + str(len(astsng)))
