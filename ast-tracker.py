@@ -1,14 +1,15 @@
 print("Starting...")
 
-from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin
+from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin, array
 import wave, os, random, time, requests, sys, json
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 from numpy import round as npround
+import numpy as np
 
-version = "v1.4.3-2"
+version = "v1.4.3-3"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 bin_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker"
@@ -108,12 +109,23 @@ def pitched_nse_gen(f_c, duration_s, amp):
     waveform_quiet = samples * amp
     return int16(waveform_quiet * 32768) # NOTE: pitched noise function (maybe temporary)
 
-def sample_gen(sample_name, length):
+def sample_gen(sample_name, length, n, amp):
     try:
         obj = wave.open(settings['sample_folder'] + "/" + sample_name + ".wav", 'r')
         sample_data = obj.readframes(obj.getnframes())
         obj.close()
-        return sample_data[:round(44100*length)]
+        sample_data = array(wave.struct.unpack("%dh"%(len(sample_data)/2), sample_data))
+        data = np.fft.rfft(sample_data)
+        data2 = [0]*len(data)
+        if n >= 0:
+            data2[n:len(data)] = data[0:(len(data)-n)]
+            data2[0:n] = data[(len(data)-n):len(data)]
+        else:
+            data2[0:(len(data)+n)] = data[-n:len(data)]
+            data2[(len(data)+n):len(data)] = data[0:-n]
+        data = np.array(data2)
+        data = np.fft.irfft(data)
+        return array(data*amp, dtype="int16")[:round(44100*length)]
     except FileNotFoundError:
         print("Sample doesn't exist")
         wait()
@@ -190,7 +202,7 @@ while True:
     print(" h) Help")
     print(" a) About")
     print(" u) Update")
-    print(" e) Exit")
+    print(" q) Quit")
     print(" ")
     mn_ch = input(": ")
     if mn_ch=="1":
@@ -210,7 +222,9 @@ while True:
             if rawfiledata==False:
                 clear()
                 c_name = input("Song name: ")
+                if c_name=="": break
                 c_artist = input("Song artist: ")
+                if c_artist=="": continue
                 c_desc = input("Song description: ")
                 rawfiledata = ["", "v1.1", c_name, c_desc, c_artist]
             clear()
@@ -264,7 +278,7 @@ while True:
                     print("[" + str(n) + "] " + i)
             print(" ")
             print(" Go to menu - 'm' ")
-            print(" Exit - 'exit'")
+            print(" Quit - 'q'")
             print(" Delete last line - 'u' ")
             print(" Repeat last line - 'r' ")
             print(" Edit specific line - 'e' + number")
@@ -282,7 +296,7 @@ while True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
-            if ch=="exit":
+            if ch=="q":
                 sys.exit(0)
             if rawfiledata[1]=="v1.1" and ch=="sd":
                 while True:
@@ -623,8 +637,8 @@ while True:
                         elif params[2]=="PSE":
                             write(file + ".wav", pitched_nse_gen(float(params[0]), float(params[1]), float(params[3])))
                         else: # sample logic
-                            result = sample_gen(params[2], float(params[1]))
-                            if result!=False:
+                            result = sample_gen(params[2], float(params[1]), int(params[0]), float(params[3]))
+                            if result.any()!=False:
                                 write(file + ".wav", result)
                         print("Line: " + str(i) + "/" + str(len(astsng)))
                 continue
@@ -1002,7 +1016,8 @@ while True:
         print(" 'NSE' - Noise generator")
         print(" 'PSE' - Pitched noise generator")
         print(" 'GTR' - Guitar sound generator")
-        print(" 'NN' - Silence generator")
+        print(" 'NN'  - Silence generator")
+        print(" '*'   - Samples support (<pitch> <length> <sample-name> <amplitude>)")
         print(" ")
         print(".AST Editor view modes:")
         print(" 'all' - display all lines")
@@ -1049,7 +1064,7 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
             print("You are using latest release!")
             print(" ")
             wait()
-    elif mn_ch=="e":
+    elif mn_ch=="q":
         sys.exit(0) # exit from main menu
     else:
         continue
