@@ -1,15 +1,14 @@
 print("Starting...")
 
-from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin, array
+from numpy import linspace, arange, pi, sin, zeros, int16, tan, arctan, arcsin, array, fft
 import wave, os, random, time, requests, sys, json
 from numpy import random as nprandom
 from numpy import abs as npabs
 from numpy import max as npmax
 from numpy import min as npmin
 from numpy import round as npround
-import numpy as np
 
-version = "v1.4.3-3"
+version = "v1.4.3-4"
 title = "Ast-Tracker " + version
 api_git_link = "https://api.github.com/repos/mrtnvgr/ast-tracker/releases/latest"
 bin_download_link = "https://github.com/mrtnvgr/ast-tracker/releases/latest/download/ast-tracker"
@@ -115,7 +114,7 @@ def sample_gen(sample_name, length, n, amp):
         sample_data = obj.readframes(obj.getnframes())
         obj.close()
         sample_data = array(wave.struct.unpack("%dh"%(len(sample_data)/2), sample_data))
-        data = np.fft.rfft(sample_data)
+        data = fft.rfft(sample_data)
         data2 = [0]*len(data)
         if n >= 0:
             data2[n:len(data)] = data[0:(len(data)-n)]
@@ -123,9 +122,7 @@ def sample_gen(sample_name, length, n, amp):
         else:
             data2[0:(len(data)+n)] = data[-n:len(data)]
             data2[(len(data)+n):len(data)] = data[0:-n]
-        data = np.array(data2)
-        data = np.fft.irfft(data)
-        return array(data*amp, dtype="int16")[:round(44100*length)]
+        return array(fft.irfft(array(data2))*amp, dtype="int16")[:round(44100*length)]
     except FileNotFoundError:
         print("Sample doesn't exist")
         wait()
@@ -221,11 +218,12 @@ while True:
             rawfiledata = readfile(file + ".ast", "ast")
             if rawfiledata==False:
                 clear()
-                c_name = input("Song name: ")
+                print("New song")
+                c_name = input("Name: ")
                 if c_name=="": break
-                c_artist = input("Song artist: ")
+                c_artist = input("Artist: ")
                 if c_artist=="": continue
-                c_desc = input("Song description: ")
+                c_desc = input("Description: ")
                 rawfiledata = ["", "v1.1", c_name, c_desc, c_artist]
             clear()
             print(title)
@@ -296,7 +294,7 @@ while True:
                 ch = input("[FAST MODE]: ")
             elif fastmodeActive==False:
                 ch = input(": ")
-            if ch=="q":
+            if ch=="q" or ch=="quit" or ch=="e" or ch=="exit":
                 sys.exit(0)
             if rawfiledata[1]=="v1.1" and ch=="sd":
                 while True:
@@ -682,14 +680,17 @@ while True:
                 continue
             if 'e' in ch and ch!="e":
                 line = ch.replace('e', '').replace(' ', '')
+                fast_prev_lines = oldlines[-1].split(" ")
                 note = input("NOTE: ")
+                if note=="": note = fast_prev_lines[0]
                 length = input("LENGTH: ")
+                if length=="": length = fast_prev_lines[1]
                 if fastmodeActive==False:
                     inst = input("INST: ")
+                    if inst=="": inst = fast_prev_lines[2]
                     amp = input("AMPLITUDE: ")
+                    if amp=="": amp = fast_prev_lines[3]
                 elif fastmodeActive==True:
-                    # last line parser
-                    fast_prev_lines = oldlines[-1].split(" ")
                     inst = fast_prev_lines[2]
                     amp = fast_prev_lines[3]
                 oldlines[int(line)] = note + " " + length + " " + inst + " " + amp
@@ -1064,7 +1065,7 @@ Copyright © 2021-2022 mrtnvgr (MIT License)
             print("You are using latest release!")
             print(" ")
             wait()
-    elif mn_ch=="q":
+    elif mn_ch=="q" or mn_ch=="quit" or mn_ch=="e" or mn_ch=="exit":
         sys.exit(0) # exit from main menu
     else:
         continue
